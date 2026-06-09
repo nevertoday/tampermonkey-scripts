@@ -2,6 +2,8 @@
 
 一组实用的 [Tampermonkey](https://www.tampermonkey.net/) 用户脚本，解决日常浏览中的实际痛点。
 
+**[>>> 一键打包下载全部脚本 <<<](https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip)**
+
 ---
 
 ## 图片下载
