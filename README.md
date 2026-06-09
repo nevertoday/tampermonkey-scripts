@@ -112,11 +112,11 @@
 
 点击下方链接，Tampermonkey 会自动弹出安装确认：
 
-- [Pinterest 图片选择器](../../raw/main/图片下载/pinterest-图片选择器.user.js)
-- [小红书图片选择器](../../raw/main/图片下载/小红书-图片选择器.user.js)
-- [微信公众号图片选择器](../../raw/main/图片下载/微信公众号-图片选择器.user.js)
-- [堆糖图片选择器](../../raw/main/图片下载/堆糖-图片选择器.user.js)
-- [500px 图片选择器](../../raw/main/图片下载/500px-图片选择器.user.js)
+- [Pinterest 图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/pinterest-图片选择器.user.js)
+- [小红书图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/小红书-图片选择器.user.js)
+- [微信公众号图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/微信公众号-图片选择器.user.js)
+- [堆糖图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/堆糖-图片选择器.user.js)
+- [500px 图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/500px-图片选择器.user.js)
 
 **方法二：手动安装**
 
