@@ -20,6 +20,20 @@
 | **堆糖图片选择器** | duitang.com | `堆糖-图片选择器.user.js` |
 | **500px 图片选择器** | 500px.com | `500px-图片选择器.user.js` |
 
+### 效果预览
+
+**Pinterest — 批量收集灵感图**：按一下 `A` 选中整屏，红框 + `✓` 持久标记，右下角 Dock 实时显示已选数量。
+
+![Pinterest 批量选择](screenshots/pinterest.png)
+
+| 500px — 摄影大图批量选择 | 小红书 — 笔记瀑布流选择 |
+|:---:|:---:|
+| ![500px](screenshots/500px.png) | ![小红书](screenshots/xiaohongshu.png) |
+| **堆糖 — 壁纸瀑布流选择** | **一键打包 — 三种下载方式** |
+| ![堆糖](screenshots/duitang.png) | ![下载方式](screenshots/download-dialog.png) |
+
+> 截图均为脚本在真实网站上的实际运行效果。
+
 ### 解决什么问题
 
 这些网站的图片**无法直接右键保存原图**——要么被 CSS 背景图替代，要么套了防右键的事件拦截，要么缩略图和原图 URL 结构完全不同，要么 CDN 有跨域限制。手动一张张操作极其繁琐，更别提批量下载几十张图。
