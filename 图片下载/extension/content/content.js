@@ -90,17 +90,10 @@
     window.addEventListener('scroll', scheduleScan, { passive: true });
     window.addEventListener('resize', scheduleScan, { passive: true });
     window.addEventListener('popstate', () => setTimeout(scheduleScan, 250));
-    patchHistory('pushState');
-    patchHistory('replaceState');
-  }
-
-  function patchHistory(method) {
-    const original = history[method];
-    history[method] = function (...args) {
-      const result = original.apply(this, args);
-      setTimeout(scheduleScan, 250);
-      return result;
-    };
+    window.setInterval(() => {
+      scheduleScan();
+      updateMiniPanel();
+    }, 3000);
   }
 
   function setupMessages() {

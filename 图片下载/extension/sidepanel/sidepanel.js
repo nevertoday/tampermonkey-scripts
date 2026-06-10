@@ -30,6 +30,20 @@ async function init() {
   renderSettings();
   renderSites();
   await refreshStatus();
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.target !== 'image-downloader-sidepanel' || message.type !== 'content-status') return;
+    currentStatus = message.payload;
+    updateHeader();
+    setCommandEnabled(Boolean(currentStatus?.enabled));
+  });
+  chrome.tabs.onActivated.addListener(() => {
+    refreshStatus();
+  });
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (tabId === activeTab?.id && changeInfo.status === 'complete') {
+      refreshStatus();
+    }
+  });
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'sync' && changes.settings) {
       settings = normalizeSettings(changes.settings.newValue);
