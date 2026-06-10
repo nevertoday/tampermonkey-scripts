@@ -1,0 +1,186 @@
+:root {
+  --idx-black: #111111;
+  --idx-ink: #262626;
+  --idx-muted: #6b6b6b;
+  --idx-line: #d4d4d4;
+  --idx-panel: #ffffff;
+  --idx-soft: #f2f2f2;
+  --idx-motion-fast: 120ms;
+  --idx-motion-med: 180ms;
+  --idx-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.idx-image-host {
+  position: relative !important;
+}
+
+.idx-select-btn {
+  position: absolute !important;
+  top: 8px !important;
+  left: 8px !important;
+  z-index: 2147483000 !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--idx-black) !important;
+  border-radius: 0 !important;
+  background: var(--idx-panel) !important;
+  box-shadow: none !important;
+  color: var(--idx-black) !important;
+  cursor: pointer !important;
+  font: 500 20px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  user-select: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+  transform: translateY(-2px) scale(0.96) !important;
+  opacity: 0 !important;
+  transition: opacity var(--idx-motion-fast) ease-out, transform var(--idx-motion-fast) var(--idx-ease-out), background var(--idx-motion-fast) ease-out, color var(--idx-motion-fast) ease-out !important;
+}
+
+.idx-hover-enabled .idx-image-host:hover > .idx-select-btn,
+.idx-select-btn.idx-active {
+  display: flex !important;
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+.idx-select-btn.idx-active {
+  background: var(--idx-black) !important;
+  border-color: var(--idx-black) !important;
+  color: #fff !important;
+}
+
+.idx-hover-enabled .idx-image-host:hover > .idx-select-btn {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+.idx-select-btn:active {
+  transform: translateY(0) scale(0.92) !important;
+}
+
+.idx-select-btn::before {
+  content: "+" !important;
+  transform: translateY(-1px) !important;
+}
+
+.idx-select-btn.idx-active::before {
+  content: "\\2713" !important;
+  font-size: 16px !important;
+  font-weight: 750 !important;
+}
+
+.idx-selected {
+  outline: 3px solid var(--idx-black) !important;
+  outline-offset: -2px !important;
+  border-radius: 0 !important;
+}
+
+#idx-mini-panel {
+  position: fixed !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  z-index: 2147483646 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 1px solid var(--idx-black) !important;
+  border-radius: 0 !important;
+  background: var(--idx-panel) !important;
+  box-shadow: none !important;
+  color: var(--idx-black) !important;
+  font: 13px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+  transition: transform var(--idx-motion-fast) var(--idx-ease-out), opacity var(--idx-motion-fast) ease-out !important;
+}
+
+#idx-mini-panel[hidden] {
+  display: none !important;
+}
+
+.idx-count {
+  min-width: 38px !important;
+  height: 38px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-right: 1px solid var(--idx-black) !important;
+  border-radius: 0 !important;
+  background: var(--idx-black) !important;
+  color: #fff !important;
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  transition: transform var(--idx-motion-fast) var(--idx-ease-out) !important;
+}
+
+.idx-count.idx-pulse {
+  transform: scale(1.08) !important;
+}
+
+#idx-mini-panel button {
+  all: unset !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 11px !important;
+  border-left: 1px solid var(--idx-line) !important;
+  border-radius: 0 !important;
+  background: var(--idx-panel) !important;
+  color: var(--idx-black) !important;
+  cursor: pointer !important;
+  font-size: 12px !important;
+  font-weight: 650 !important;
+  transition: transform var(--idx-motion-fast) var(--idx-ease-out), background var(--idx-motion-fast) ease-out, color var(--idx-motion-fast) ease-out, opacity var(--idx-motion-fast) ease-out !important;
+}
+
+#idx-mini-panel button:not(:disabled):hover {
+  transform: translateY(-1px) !important;
+}
+
+#idx-mini-panel button:not(:disabled):active {
+  transform: translateY(0) scale(0.98) !important;
+}
+
+#idx-mini-panel button.idx-primary {
+  background: var(--idx-black) !important;
+  color: #fff !important;
+}
+
+#idx-mini-panel button:disabled {
+  cursor: default !important;
+  opacity: 0.42 !important;
+}
+
+.idx-toast {
+  position: fixed !important;
+  left: 50% !important;
+  bottom: 82px !important;
+  z-index: 2147483647 !important;
+  transform: translate(-50%, 8px) !important;
+  padding: 10px 14px !important;
+  border: 1px solid var(--idx-black) !important;
+  border-radius: 0 !important;
+  background: var(--idx-black) !important;
+  color: #fff !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity var(--idx-motion-med) ease-out, transform var(--idx-motion-med) var(--idx-ease-out) !important;
+  font: 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
+}
+
+.idx-toast.idx-show {
+  opacity: 1 !important;
+  transform: translate(-50%, 0) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

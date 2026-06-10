@@ -146,17 +146,46 @@
 
 ---
 
+## Chrome 扩展版（无需 Tampermonkey）
+
+> 路径：`图片下载/extension/`
+
+如果你不想装 Tampermonkey，也可以用打包好的 **Chrome MV3 扩展**，功能与脚本一致，并多了一个**侧边栏**：站点切换、设置开关、一键下载都集中在面板里。
+
+**亮点：**
+- 浏览器原生侧边栏，集中管理选择与下载，不占用网页空间
+- 支持全部 5 个站点，复用脚本同款的 URL 还原与内容图过滤逻辑
+- 三种下载方式：打包 ZIP / 逐张下载原图 / 保存链接文本
+- 可在设置里开关网页快捷栏、悬停按钮、键盘快捷键
+
+**安装（开发者模式加载）：**
+1. 下载本仓库（[ZIP](https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip)）并解压
+2. Chrome 打开 `chrome://extensions/`，右上角开启「开发者模式」
+3. 点击「加载已解压的扩展程序」，选择 `图片下载/extension/` 目录
+4. 打开支持的网站，点击工具栏图标唤出侧边栏即可使用
+
+设计与实现文档见 `图片下载/extension/docs/`。
+
+---
+
 ## 项目结构
 
 ```
 油猴脚本/
 ├── README.md
+├── screenshots/                  # 运行截图
 ├── 图片下载/
 │   ├── pinterest-图片选择器.user.js
 │   ├── 小红书-图片选择器.user.js
 │   ├── 微信公众号-图片选择器.user.js
 │   ├── 堆糖-图片选择器.user.js
-│   └── 500px-图片选择器.user.js
+│   ├── 500px-图片选择器.user.js
+│   └── extension/                # Chrome MV3 扩展版（含侧边栏）
+│       ├── manifest.json
+│       ├── background.js         # 下载服务
+│       ├── content/              # 页面检测与选择 UI
+│       ├── sidepanel/            # 侧边栏界面
+│       └── docs/                 # 设计与实现文档
 └── (更多脚本分类待补充)
 ```
 

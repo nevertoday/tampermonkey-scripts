@@ -1,0 +1,62 @@
+{
+  "manifest_version": 3,
+  "name": "图片下载助手",
+  "version": "0.1.0",
+  "description": "在小红书、Pinterest、微信公众号、500px、堆糖中选择图片，并通过侧边栏批量下载。",
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "sidePanel",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.xiaohongshu.com/*",
+    "https://xiaohongshu.com/*",
+    "https://*.xhscdn.com/*",
+    "https://*.pinterest.com/*",
+    "https://pinterest.com/*",
+    "https://*.pinimg.com/*",
+    "https://mp.weixin.qq.com/*",
+    "https://mmbiz.qpic.cn/*",
+    "https://mmbiz.qlogo.cn/*",
+    "https://*.500px.com/*",
+    "https://500px.com/*",
+    "https://*.500px.org/*",
+    "https://*.duitang.com/*",
+    "https://duitang.com/*",
+    "https://*.dtstatic.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "图片下载助手"
+  },
+  "side_panel": {
+    "default_path": "sidepanel/index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.xiaohongshu.com/*",
+        "https://xiaohongshu.com/*",
+        "https://*.pinterest.com/*",
+        "https://pinterest.com/*",
+        "https://mp.weixin.qq.com/*",
+        "https://*.500px.com/*",
+        "https://500px.com/*",
+        "https://*.duitang.com/*",
+        "https://duitang.com/*"
+      ],
+      "js": [
+        "content/site-adapters.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
