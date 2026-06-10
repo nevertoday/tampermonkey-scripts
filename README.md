@@ -199,6 +199,18 @@
 - 需要 `GM_setValue`、`GM_getValue`、`GM_xmlhttpRequest`、`GM_download` 权限
 - 已在 macOS Chrome 最新版测试通过
 
+---
+
+## 支持作者
+
+这套图片选择器会继续保持免费开源。如果它帮你省下了一张张存图的时间，欢迎 Star、分享给需要的人，或者扫描下面的二维码打赏小小东一点算力，让他继续优化脚本、适配更多站点。反馈和 issue 同样有帮助。
+
+<p>
+  <img src="docs/images/wechat-reward-qr.png" alt="微信打赏小小东的二维码" width="180">
+  <img src="docs/images/alipay-reward-qr.png" alt="支付宝打赏小小东的二维码" width="180">
+  <img src="docs/images/buy-me-a-coffee-qr.png" alt="赞赏小小东算力的二维码" width="180">
+</p>
+
 ## 许可证
 
 MIT License

@@ -5,5 +5,3 @@ node_modules/
 
 # 内部设计草稿（impeccable skill）
 .impeccable.md
-# 打赏二维码（本地放置，不入库）
-图片下载/extension/assets/donate-*.png
