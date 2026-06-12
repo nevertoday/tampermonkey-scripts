@@ -1,4 +1,6 @@
 const DEFAULT_CONCURRENCY = 4;
+const HISTORY_KEY = 'downloadHistory';
+const HISTORY_LIMIT = 50;
 
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel?.setPanelBehavior) {
@@ -6,11 +8,16 @@ chrome.runtime.onInstalled.addListener(() => {
   }
 });
 
+chrome.action.onClicked.addListener((tab) => {
+  if (!chrome.sidePanel?.open || !tab?.id) return;
+  chrome.sidePanel.open({ tabId: tab.id }).catch(() => {});
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || message.target !== 'image-downloader-background') return false;
 
   if (message.type === 'download') {
-    handleDownload(message.payload || {})
+    handleDownload(message.payload || {}, sender)
       .then((result) => sendResponse({ ok: true, result }))
       .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
     return true;
@@ -19,11 +26,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-async function handleDownload(payload) {
+async function handleDownload(payload, sender = {}) {
   const entries = Array.isArray(payload.entries) ? payload.entries : [];
   if (!entries.length) throw new Error('还没有选择图片。请先在页面上选择图片。');
 
   const mode = payload.mode || 'zip';
+  const progress = downloadProgressReporter(sender, mode, entries.length);
   const prefix = sanitizeFilename(payload.prefix || 'images');
   const batch = hash(entries.map((entry) => entry.url).join('\n')).slice(0, 8);
   const baseName = `${prefix}-${batch}`;
@@ -31,11 +39,14 @@ async function handleDownload(payload) {
   if (mode === 'links') {
     const body = entries.map((entry) => entry.url).join('\n');
     await downloadDataUrl(textDataUrl(body), `${baseName}.txt`);
-    return { count: entries.length, failed: 0, mode };
+    const result = { count: entries.length, failed: 0, mode };
+    await recordHistory(payload, result);
+    return result;
   }
 
   if (mode === 'direct') {
     let failed = 0;
+    await progress(0);
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index];
       const filename = `${baseName}-${String(index + 1).padStart(3, '0')}.${ext(entry.url)}`;
@@ -49,13 +60,19 @@ async function handleDownload(payload) {
       } catch (_) {
         failed += 1;
       }
+      await progress(index + 1);
       await delay(250);
     }
-    return { count: entries.length - failed, failed, mode };
+    const result = { count: entries.length - failed, failed, mode };
+    await progress({ phase: 'done', done: entries.length });
+    await recordHistory(payload, result);
+    return result;
   }
 
   const files = [];
   let failed = 0;
+  let processed = 0;
+  await progress({ phase: 'fetching', done: 0 });
   await parallel(entries, DEFAULT_CONCURRENCY, async (entry, index) => {
     try {
       const response = await fetch(entry.url, { credentials: 'omit', cache: 'no-store' });
@@ -67,13 +84,84 @@ async function handleDownload(payload) {
       });
     } catch (_) {
       failed += 1;
+    } finally {
+      processed += 1;
+      await progress({ phase: 'fetching', done: processed });
     }
   });
 
   if (!files.length) throw new Error('没有抓取到图片。可以改用“保存链接文本”。');
-  const zip = await makeZip(files);
+  await progress({ phase: 'packing', done: 0, total: files.length });
+  const zip = await makeZip(files, async (done) => {
+    await progress({ phase: 'packing', done, total: files.length });
+  });
+  await progress({ phase: 'saving', done: files.length, total: files.length });
   await downloadDataUrl(await blobToDataUrl(zip), `${baseName}.zip`);
-  return { count: files.length, failed, mode: 'zip' };
+  const result = { count: files.length, failed, mode: 'zip' };
+  await progress({ phase: 'done', done: files.length, total: files.length });
+  await recordHistory(payload, result);
+  return result;
+}
+
+function downloadProgressReporter(sender, mode, total) {
+  const tabId = sender?.tab?.id;
+  return async (value) => {
+    if (!tabId || !chrome.tabs?.sendMessage) return;
+    const payload = typeof value === 'object' && value !== null
+      ? value
+      : { done: value };
+    await chrome.tabs.sendMessage(tabId, {
+      target: 'image-downloader-content',
+      type: 'download-progress',
+      payload: {
+        mode,
+        phase: payload.phase || 'active',
+        done: payload.done,
+        total: payload.total || total
+      }
+    }).catch(() => {});
+  };
+}
+
+async function recordHistory(payload, result) {
+  try {
+    await addHistory(payload, result);
+  } catch (_) {
+    // History is best-effort; a storage failure should not make a completed download look failed.
+  }
+}
+
+async function addHistory(payload, result) {
+  const stored = await chrome.storage.local.get(HISTORY_KEY);
+  const history = Array.isArray(stored[HISTORY_KEY]) ? stored[HISTORY_KEY] : [];
+  history.unshift({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    type: 'download',
+    siteId: payload.site?.id || payload.siteId || '',
+    siteName: payload.site?.name || payload.siteName || payload.prefix || '图片',
+    prefix: payload.prefix || 'images',
+    mode: result.mode,
+    count: result.count || 0,
+    failed: result.failed || 0,
+    entries: normalizeHistoryEntries(payload.entries),
+    createdAt: Date.now()
+  });
+  await chrome.storage.local.set({ [HISTORY_KEY]: history.slice(0, HISTORY_LIMIT) });
+}
+
+function normalizeHistoryEntries(entries) {
+  if (!Array.isArray(entries)) return [];
+  const seen = new Set();
+  return entries
+    .map((entry, index) => ({
+      id: String(entry?.id || `entry-${index}`),
+      url: String(entry?.url || '').trim()
+    }))
+    .filter((entry) => {
+      if (!/^https?:\/\//i.test(entry.url) || seen.has(entry.url)) return false;
+      seen.add(entry.url);
+      return true;
+    });
 }
 
 function textDataUrl(text) {
@@ -99,11 +187,12 @@ async function blobToDataUrl(blob) {
   return `data:${blob.type || 'application/octet-stream'};base64,${btoa(binary)}`;
 }
 
-async function makeZip(files) {
+async function makeZip(files, onProgress) {
   const enc = new TextEncoder();
   const locals = [];
   const centrals = [];
   let off = 0;
+  let packed = 0;
 
   for (const file of files) {
     const nameBytes = enc.encode(file.name);
@@ -136,6 +225,8 @@ async function makeZip(files) {
     locals.push(localHeader, data);
     centrals.push(centralHeader);
     off += localHeader.length + data.length;
+    packed += 1;
+    if (onProgress) await onProgress(packed);
   }
 
   const centralSize = centrals.reduce((sum, item) => sum + item.length, 0);

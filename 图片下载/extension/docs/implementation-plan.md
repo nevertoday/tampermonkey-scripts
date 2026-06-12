@@ -25,7 +25,7 @@
 **Files:**
 - Create: `extension/content/site-adapters.js`
 
-- [x] Define adapters for 小红书, Pinterest, 微信公众号, 500px, and 堆糖.
+- [x] Define adapters for 小红书, Pinterest, 微信公众号, 500px, 堆糖, and 花瓣.
 - [x] Port URL normalization and content-image filters from existing scripts.
 - [x] Expose `window.ImageDownloaderAdapters`.
 - [x] Verify syntax with `node --check`.
@@ -40,7 +40,7 @@
 - [x] Detect current adapter, scan images, inject per-image selection buttons, and keep selected outlines.
 - [x] Add mini panel with selected count and quick actions.
 - [x] Add side panel command handling.
-- [x] Add keyboard shortcuts for select-hovered, select visible, download, and clear.
+- [x] Add keyboard shortcuts for pointer-based image selection, download, and clear.
 - [x] Verify syntax with `node --check`.
 
 ### Task 4: Side Panel UI
@@ -53,7 +53,7 @@
 - [x] Build three tabs: websites, settings, donation.
 - [x] Add per-site enable switches and prefix inputs.
 - [x] Add global settings controls.
-- [x] Add current-tab commands for select all, clear, copy links, and downloads.
+- [x] Add current-tab commands for pointer-based selection, clear, copy links, and downloads.
 - [x] Verify syntax with `node --check`.
 
 ### Task 5: Verification
@@ -64,4 +64,3 @@
 - [x] Run JSON parse check for `extension/manifest.json`.
 - [x] Run `node --check` for all extension JavaScript files.
 - [x] Confirm no old user scripts were modified.
-

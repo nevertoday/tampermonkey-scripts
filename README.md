@@ -10,12 +10,13 @@
 
 > 路径：`图片下载/`
 
-在图片类网站上批量选择、下载原图。支持 5 个主流平台：
+在图片类网站上批量选择、下载原图。支持 6 个主流平台：
 
 | 脚本 | 适用站点 | 文件 |
 |------|----------|------|
 | **Pinterest 图片选择器** | pinterest.com | `pinterest-图片选择器.user.js` |
 | **小红书图片选择器** | xiaohongshu.com | `小红书-图片选择器.user.js` |
+| **花瓣图片选择器** | huaban.com | `花瓣-图片选择器.user.js` |
 | **微信公众号图片选择器** | mp.weixin.qq.com | `微信公众号-图片选择器.user.js` |
 | **堆糖图片选择器** | duitang.com | `堆糖-图片选择器.user.js` |
 | **500px 图片选择器** | 500px.com | `500px-图片选择器.user.js` |
@@ -42,7 +43,7 @@
 
 ### 统一的交互方式
 
-所有 5 个脚本共享一致的操作逻辑，学会一个就会全部：
+所有 6 个脚本共享一致的操作逻辑，学会一个就会全部：
 
 **选择图片：**
 - 鼠标悬停到图片上 → 左上角出现圆形 `+` 按钮 → 点击选中
@@ -87,6 +88,12 @@
 - 详情页弹窗内的图片同样可以选中
 - URL 参数自动清理以获取最高画质
 
+**花瓣**
+- 图片走 `gd-hbimg-edge.huaban.com` / `gd-hbimg-other.huaban.com` CDN，瀑布流卡片密集
+- 脚本剥离 `/small/` 与 `_fw240webp` 等缩略标记还原原图，并保留 `auth_key` 鉴权参数
+- 卡片整体是 `/pins/` 链接，采用页面级浮动按钮，避免点击被卡片链接劫持
+- 自动按 pin 链接、尺寸和类名过滤掉头像、图标等非内容图
+
 **微信公众号**
 - 文章图片使用 `mmbiz.qpic.cn`，带 `wx_fmt` 参数控制格式
 - 脚本自动过滤头像、二维码、装饰图等非内容图片
@@ -130,6 +137,7 @@
 
 - [Pinterest 图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/pinterest-图片选择器.user.js)
 - [小红书图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/小红书-图片选择器.user.js)
+- [花瓣图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/花瓣-图片选择器.user.js)
 - [微信公众号图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/微信公众号-图片选择器.user.js)
 - [堆糖图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/堆糖-图片选择器.user.js)
 - [500px 图片选择器](https://github.com/nevertoday/tampermonkey-scripts/raw/main/图片下载/500px-图片选择器.user.js)
@@ -150,13 +158,15 @@
 
 > 路径：`图片下载/extension/`
 
-如果你不想装 Tampermonkey，也可以用打包好的 **Chrome MV3 扩展**，功能与脚本一致，并多了一个**侧边栏**：站点切换、设置开关、一键下载都集中在面板里。
+如果你不想装 Tampermonkey，也可以用打包好的 **Chrome MV3 扩展「图拾 Dock」**，功能与脚本一致，并多了一个**侧边栏**：站点切换、历史回看、设置开关、一键下载都集中在面板里。
 
 **亮点：**
 - 浏览器原生侧边栏，集中管理选择与下载，不占用网页空间
-- 支持全部 5 个站点，复用脚本同款的 URL 还原与内容图过滤逻辑
+- 支持全部 6 个站点，复用脚本同款的 URL 还原与内容图过滤逻辑
 - 三种下载方式：打包 ZIP / 逐张下载原图 / 保存链接文本
-- 可在设置里开关网页快捷栏、悬停按钮、键盘快捷键
+- **历史**标签记录每次下载/复制，可按站点筛选、预览缩略图并一键重新下载
+- 通过 `declarativeNetRequest` 为图床请求改写 Referer，绕过花瓣等站点的防盗链（预览与抓取都不再 403）
+- 可在设置里开关网页快捷栏、悬停按钮、键盘快捷键，并自定义各站文件名前缀
 
 **安装（开发者模式加载）：**
 1. 下载本仓库（[ZIP](https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip)）并解压
@@ -177,14 +187,17 @@
 ├── 图片下载/
 │   ├── pinterest-图片选择器.user.js
 │   ├── 小红书-图片选择器.user.js
+│   ├── 花瓣-图片选择器.user.js
 │   ├── 微信公众号-图片选择器.user.js
 │   ├── 堆糖-图片选择器.user.js
 │   ├── 500px-图片选择器.user.js
-│   └── extension/                # Chrome MV3 扩展版（含侧边栏）
+│   └── extension/                # Chrome MV3 扩展版「图拾 Dock」（含侧边栏）
 │       ├── manifest.json
-│       ├── background.js         # 下载服务
-│       ├── content/              # 页面检测与选择 UI
-│       ├── sidepanel/            # 侧边栏界面
+│       ├── background.js         # 下载服务（ZIP 打包 / 下载）
+│       ├── content/              # 页面检测与选择 UI、站点适配
+│       ├── sidepanel/            # 侧边栏界面（站点 / 历史 / 设置）
+│       ├── rules/                # declarativeNetRequest 防盗链 Referer 规则
+│       ├── assets/               # 图标与打赏二维码
 │       └── docs/                 # 设计与实现文档
 └── (更多脚本分类待补充)
 ```
@@ -203,12 +216,12 @@
 
 ## 支持作者
 
-这套图片选择器会继续保持免费开源。如果它帮你省下了一张张存图的时间，欢迎 Star、分享给需要的人，或者扫描下面的二维码打赏小小东一点算力，让他继续优化脚本、适配更多站点。反馈和 issue 同样有帮助。
+这套图片选择器会继续保持免费开源。如果它帮你省下了一张张存图的时间，欢迎 Star、分享给需要的人，或者扫描下面的二维码请小小东喝杯咖啡，让他继续优化脚本、适配更多站点。反馈和 issue 同样有帮助。
 
 <p>
   <img src="docs/images/wechat-reward-qr.png" alt="微信打赏小小东的二维码" width="180">
   <img src="docs/images/alipay-reward-qr.png" alt="支付宝打赏小小东的二维码" width="180">
-  <img src="docs/images/buy-me-a-coffee-qr.png" alt="赞赏小小东算力的二维码" width="180">
+  <img src="docs/images/buy-me-a-coffee-qr.png" alt="请小小东喝咖啡的赞赏二维码" width="180">
 </p>
 
 ## 许可证

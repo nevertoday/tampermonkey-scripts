@@ -1,15 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "图片下载助手",
+  "name": "图拾 Dock",
+  "short_name": "图拾",
   "version": "0.1.0",
-  "description": "在小红书、Pinterest、微信公众号、500px、堆糖中选择图片，并通过侧边栏批量下载。",
+  "description": "在小红书、Pinterest、微信公众号、500px、堆糖、花瓣中拾取图片，并通过 Dock 侧边栏批量下载。",
+  "icons": {
+    "16": "assets/icon-16.png",
+    "32": "assets/icon-32.png",
+    "48": "assets/icon-48.png",
+    "128": "assets/icon-128.png"
+  },
   "permissions": [
     "activeTab",
+    "declarativeNetRequest",
     "downloads",
     "sidePanel",
     "storage",
     "tabs"
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "referer-rules",
+        "enabled": true,
+        "path": "rules/referer.json"
+      }
+    ]
+  },
   "host_permissions": [
     "https://*.xiaohongshu.com/*",
     "https://xiaohongshu.com/*",
@@ -25,13 +42,21 @@
     "https://*.500px.org/*",
     "https://*.duitang.com/*",
     "https://duitang.com/*",
-    "https://*.dtstatic.com/*"
+    "https://*.dtstatic.com/*",
+    "https://*.huaban.com/*",
+    "https://huaban.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "图片下载助手"
+    "default_title": "图拾 Dock",
+    "default_icon": {
+      "16": "assets/icon-16.png",
+      "32": "assets/icon-32.png",
+      "48": "assets/icon-48.png",
+      "128": "assets/icon-128.png"
+    }
   },
   "side_panel": {
     "default_path": "sidepanel/index.html"
@@ -47,7 +72,9 @@
         "https://*.500px.com/*",
         "https://500px.com/*",
         "https://*.duitang.com/*",
-        "https://duitang.com/*"
+        "https://duitang.com/*",
+        "https://*.huaban.com/*",
+        "https://huaban.com/*"
       ],
       "js": [
         "content/site-adapters.js",

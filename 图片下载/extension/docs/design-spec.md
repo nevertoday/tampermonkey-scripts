@@ -2,7 +2,7 @@
 
 ## Goal
 
-Turn the five standalone Tampermonkey image selector scripts into one Chrome MV3 extension with a browser side panel. The extension keeps the current page-level selection workflow while centralizing site switches, settings, downloads, and donation content in one sidebar.
+Turn the standalone Tampermonkey image selector scripts into one Chrome MV3 extension with a browser side panel. The extension keeps the current page-level selection workflow while centralizing site switches, settings, downloads, and donation content in one sidebar.
 
 ## Product Shape
 
@@ -14,15 +14,23 @@ The extension has three top-level side panel tabs:
 
 On supported pages, the content script injects a small image selection control onto detected content images. Selected images keep a persistent outline. A compact page mini panel shows the selected count and quick actions; it can be hidden from settings.
 
+Sidebar and mini-panel behavior:
+
+- Clicking the browser extension icon opens the Chrome side panel through `chrome.sidePanel`.
+- The web page mini panel can be expanded or collapsed from the panel itself.
+- The collapsed mini panel keeps the selected count visible and hides quick action buttons.
+- Mini panel collapse state is saved in `chrome.storage.sync`.
+
 Visual system:
 
-- Black, white, and neutral grays only. Site brand colors are not used in the interface.
-- No rounded-corner UI. Buttons, cards, inputs, counters, page controls, selected outlines, toasts, and placeholders use square corners.
-- Borders, contrast, and spacing carry hierarchy instead of color accents, shadows, gradients, or glass effects.
+- Morandi-inspired, low-saturation color system: warm ivory surfaces, muted sage primary actions, dusty gray-green text, soft taupe borders, and restrained clay accents.
+- Keep the interface clean, light, and healing without turning it into a decorative landing page.
+- Buttons, cards, inputs, counters, page controls, selected outlines, toasts, and placeholders use small consistent radii.
+- Borders, contrast, spacing, and subtle color temperature carry hierarchy instead of loud brand colors or heavy shadows.
 
 Copy system:
 
-- Buttons use explicit actions, such as `选择当前屏幕`, `复制图片链接`, and `开始下载`.
+- Buttons use explicit actions, such as `选图`, `复制图片链接`, and `开始下载`.
 - Status messages explain the current state or next step instead of using generic words like `失败` or `处理中`.
 - Settings labels describe the user-visible behavior, not implementation details.
 
@@ -41,6 +49,7 @@ Initial adapters:
 - 微信公众号: `mp.weixin.qq.com`
 - 500px: `500px.com`
 - 堆糖: `duitang.com`
+- 花瓣: `huaban.com`
 
 Each adapter owns its image filtering and URL normalization rules. Shared code owns storage, selection state, UI injection, download messaging, keyboard handling, and side panel communication.
 
@@ -60,7 +69,7 @@ Data flow:
 1. Side panel reads `chrome.storage.sync` settings and active tab status.
 2. Content script detects the site adapter and reads settings.
 3. Content script scans page images, injects select buttons, and stores selected URLs in `chrome.storage.local`.
-4. Side panel sends commands to the content script for select all, clear, copy links, and download.
+4. Side panel sends commands to the content script for pointer-based image selection, clear, copy links, and download.
 5. Downloads are delegated to the background service worker so host permissions and `chrome.downloads` are centralized.
 
 ## Storage
@@ -70,6 +79,7 @@ Data flow:
 - `settings.sites[siteId].enabled`
 - `settings.sites[siteId].prefix`
 - `settings.showMiniPanel`
+- `settings.miniPanelCollapsed`
 - `settings.showHoverButtons`
 - `settings.enableShortcuts`
 - `settings.defaultDownloadMode`

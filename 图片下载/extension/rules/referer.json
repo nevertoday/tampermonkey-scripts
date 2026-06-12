@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://huaban.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||huaban.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 2,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://www.xiaohongshu.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||xhscdn.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://www.pinterest.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||pinimg.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://www.duitang.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||dtstatic.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://mp.weixin.qq.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||mmbiz.qpic.cn",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  }
+]

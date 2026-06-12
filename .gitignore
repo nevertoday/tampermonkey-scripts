@@ -5,3 +5,9 @@ node_modules/
 
 # 内部设计草稿（impeccable skill）
 .impeccable.md
+
+# 测试/调试临时产物与浏览器配置
+tmp/
+
+# Chrome 加载扩展时生成的索引规则缓存
+_metadata/

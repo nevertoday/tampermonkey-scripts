@@ -45,6 +45,7 @@
     let collapsed = false;
     let mx = -1, my = -1;
     let busy = false;
+    let progress = null;
     let raf = null;
     // 不再用 WeakSet 跟踪 img，改为通过 host 是否已有按钮来去重
 
@@ -275,13 +276,18 @@
     -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
 }
 #ps-dock .ps-badge {
-    display: flex !important; align-items: center !important; justify-content: center !important;
+    display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important;
     min-width: 40px !important; height: 40px !important; border-radius: 50% !important;
     background: rgba(255,36,66,0.06) !important; flex-shrink: 0 !important;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s !important;
 }
 #ps-dock .ps-num {
     font-size: 17px !important; font-weight: 800 !important; color: #ff2442 !important; line-height: 1 !important;
 }
+#ps-dock .ps-stage { display: none !important; margin-top: 2px !important; font-size: 8px !important; font-weight: 650 !important; color: #d81e38 !important; opacity: 0.72 !important; }
+#ps-dock .ps-badge.ps-busy { background: conic-gradient(#ff2442 var(--ps-progress, 0deg), rgba(255,36,66,0.08) 0deg) !important; box-shadow: inset 0 0 0 5px rgba(255,255,255,0.9), 0 2px 10px rgba(255,36,66,0.12) !important; }
+#ps-dock .ps-badge.ps-busy .ps-num { font-size: 15px !important; }
+#ps-dock .ps-badge.ps-busy .ps-stage { display: block !important; }
 #ps-dock .ps-expanded button {
     all: unset !important;
     display: inline-flex !important; align-items: center !important; justify-content: center !important;
@@ -327,7 +333,7 @@
 #ps-dock .ps-pill:active { transform: scale(0.94) !important; }
 #ps-dock .ps-pill-n { font-size: 17px !important; font-weight: 800 !important; color: #ff2442 !important; line-height: 1 !important; }
 #ps-dock .ps-pill-l { font-size: 8px !important; color: #ff2442 !important; opacity: 0.6 !important; margin-top: 2px !important; }
-#ps-dock .ps-pill.ps-busy { animation: ps-pulse 1.2s ease-in-out infinite !important; border-color: #ff6b00 !important; }
+#ps-dock .ps-pill.ps-busy { animation: ps-pulse 1.2s ease-in-out infinite !important; border-color: #ff6b00 !important; background: conic-gradient(#ff2442 var(--ps-progress, 0deg), rgba(255,36,66,0.08) 0deg) !important; box-shadow: inset 0 0 0 5px rgba(255,255,255,0.9), 0 2px 12px rgba(255,36,66,0.16) !important; }
 #ps-dock .ps-pill.ps-busy .ps-pill-n { font-size: 13px !important; color: #ff6b00 !important; }
 #ps-dock .ps-pill.ps-busy .ps-pill-l { color: #ff6b00 !important; }
 @keyframes ps-pulse {
@@ -410,13 +416,16 @@
         const d = document.getElementById('ps-dock');
         if (!d) return;
         const n = selected.size;
+        const value = dockValue();
+        const label = dockLabel();
+        d.style.setProperty('--ps-progress', `${progressDegrees()}deg`);
 
         if (collapsed) {
             d.innerHTML = '';
             const pill = document.createElement('div');
             pill.className = 'ps-pill';
             pill.style.cssText = 'width:52px;height:52px;border-radius:50%;background:#fff;border:2px solid #ff2442;box-shadow:0 2px 12px rgba(255,36,66,0.18);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;';
-            pill.innerHTML = `<span class="ps-pill-n" style="font-size:17px;font-weight:800;color:#ff2442;line-height:1">${n}</span><span class="ps-pill-l" style="font-size:8px;color:#ff2442;opacity:0.6;margin-top:2px">${busy ? '下载中' : '已选'}</span>`;
+            pill.innerHTML = `<span class="ps-pill-n" style="font-size:17px;font-weight:800;color:#ff2442;line-height:1">${value}</span><span class="ps-pill-l" style="font-size:8px;color:#ff2442;opacity:0.6;margin-top:2px">${label}</span>`;
             if (busy) pill.classList.add('ps-busy');
             pill.onclick = () => { collapsed = false; save(SK.dock, false); renderDock(); };
             d.appendChild(pill);
@@ -426,7 +435,7 @@
             bar.className = 'ps-expanded';
             bar.style.cssText = 'display:flex;align-items:center;gap:5px;padding:5px 6px 5px 5px;border-radius:26px;background:rgba(255,255,255,0.92);border:1px solid rgba(0,0,0,0.06);box-shadow:0 4px 24px rgba(0,0,0,0.08);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);';
             bar.innerHTML = `
-                <div class="ps-badge" style="display:flex;align-items:center;justify-content:center;min-width:40px;height:40px;border-radius:50%;background:rgba(255,36,66,0.06)"><span class="ps-num" style="font-size:17px;font-weight:800;color:#ff2442">${n}</span></div>
+                <div class="ps-badge ${busy ? 'ps-busy' : ''}" style="display:flex;align-items:center;justify-content:center;min-width:40px;height:40px;border-radius:50%;background:rgba(255,36,66,0.06)"><span class="ps-num" style="font-size:17px;font-weight:800;color:#ff2442">${value}</span><span class="ps-stage">${label}</span></div>
                 <button class="ps-g" data-a="all">全选<kbd>A</kbd></button>
                 <button class="ps-g" data-a="clear">清空</button>
                 <button class="ps-g" data-a="links">链接</button>
@@ -455,12 +464,34 @@
         const d = document.getElementById('ps-dock');
         if (!d) return;
         const n = selected.size;
+        d.style.setProperty('--ps-progress', `${progressDegrees()}deg`);
         const num = d.querySelector('.ps-num') || d.querySelector('.ps-pill-n');
-        if (num) num.textContent = n;
+        if (num) num.textContent = dockValue();
+        const stage = d.querySelector('.ps-stage') || d.querySelector('.ps-pill-l');
+        if (stage) stage.textContent = dockLabel();
+        d.querySelector('.ps-badge')?.classList.toggle('ps-busy', busy);
+        d.querySelector('.ps-pill')?.classList.toggle('ps-busy', busy);
         const dlBtn = d.querySelector('[data-a="dl"]');
         const dlNewBtn = d.querySelector('[data-a="dl-new"]');
         if (dlBtn) dlBtn.disabled = n === 0 || busy;
         if (dlNewBtn) dlNewBtn.disabled = n === 0 || busy;
+    }
+
+    function dockValue() {
+        return progress ? progress.done : selected.size;
+    }
+
+    function dockLabel() {
+        if (!progress) return busy ? '下载中' : '已选';
+        if (progress.phase === 'fetching') return '抓取';
+        if (progress.phase === 'packing') return '打包';
+        if (progress.phase === 'saving') return '保存';
+        return '下载';
+    }
+
+    function progressDegrees() {
+        if (!progress || !progress.total) return 0;
+        return Math.round((progress.done / progress.total) * 360);
     }
 
     // === 事件 ===
@@ -548,13 +579,25 @@
         const modal = showModal(`
             <h3>下载方式</h3><p>共 ${selected.size} 张图片</p>
             <div class="ps-dl-list">
-                <button class="ps-dl-item" data-m="list">链接列表<small>保存全部原图 URL 到 .txt</small></button>
-                <button class="ps-dl-item" data-m="direct">逐张下载<small>直接保存到本地</small></button>
-                <button class="ps-dl-item" data-m="zip">ZIP 压缩包<small>抓取图片打包下载</small></button>
+                <button class="ps-dl-item" data-k="1" data-m="list">链接列表<kbd>1</kbd><small>保存全部原图 URL 到 .txt</small></button>
+                <button class="ps-dl-item" data-k="2" data-m="direct">逐张下载<kbd>2</kbd><small>直接保存到本地</small></button>
+                <button class="ps-dl-item" data-k="3" data-m="zip">ZIP 压缩包<kbd>3</kbd><small>抓取图片打包下载</small></button>
             </div>`);
+        modal._psKeydown = (e) => {
+            const mode = downloadModeForKey(e.key);
+            if (!mode) return false;
+            e.preventDefault();
+            closeModal(modal);
+            execDl(mode, isNew);
+            return true;
+        };
         modal.querySelectorAll('[data-m]').forEach(b => {
             b.onclick = () => { closeModal(modal); execDl(b.dataset.m, isNew); };
         });
+    }
+
+    function downloadModeForKey(key) {
+        return ({ 1: 'list', 2: 'direct', 3: 'zip' })[String(key || '').trim()] || '';
     }
 
     async function execDl(mode, isNew) {
@@ -566,7 +609,7 @@
             dlBlob(new Blob([entries.map(e => e[1]).join('\n')], { type: 'text/plain' }), `${name}.txt`);
             clearSel(); toast('链接已下载');
         } else if (mode === 'direct') {
-            busy = true; renderDock();
+            busy = true; progress = { phase: 'active', done: 0, total: entries.length }; renderDock();
             let ok = 0, fail = 0;
             for (let i = 0; i < entries.length; i++) {
                 const url = entries[i][1];
@@ -578,13 +621,13 @@
                     fail++;
                     console.warn('[XHS] 下载失败:', fn, e);
                 }
-                setProgress(isNew, `${i + 1}/${entries.length}`);
+                setProgress(isNew, 'active', i + 1, entries.length);
                 if (i < entries.length - 1) await delay(600);
             }
-            busy = false; clearSel(); renderDock();
+            busy = false; progress = null; clearSel(); renderDock();
             toast(fail ? `完成 ${ok} 张，失败 ${fail} 张` : '下载完成');
         } else if (mode === 'zip') {
-            busy = true; renderDock();
+            busy = true; progress = { phase: 'fetching', done: 0, total: entries.length }; renderDock();
             let done = 0;
             const files = [];
             await parallel(entries, 6, async ([id, url], i) => {
@@ -592,29 +635,45 @@
                     const b = await fetchImg(url);
                     files.push({ name: `${name}/${String(i + 1).padStart(3, '0')}-${id}.${ext(url, b.type)}`, blob: b });
                 } catch (_) {}
-                setProgress(isNew, `${++done}/${entries.length}`);
+                setProgress(isNew, 'fetching', ++done, entries.length);
             });
             if (files.length) {
-                setProgress(isNew, '打包中');
-                dlBlob(await makeZip(files), `${name}.zip`);
-                busy = false; clearSel(); renderDock(); toast('ZIP 已下载');
+                setProgress(isNew, 'packing', 0, files.length);
+                const zip = await makeZip(files, async (packed) => {
+                    setProgress(isNew, 'packing', packed, files.length);
+                });
+                setProgress(isNew, 'saving', files.length, files.length);
+                dlBlob(zip, `${name}.zip`);
+                busy = false; progress = null; clearSel(); renderDock(); toast('ZIP 已下载');
             } else {
-                busy = false; renderDock(); toast('无可用图片');
+                busy = false; progress = null; renderDock(); toast('无可用图片');
             }
         }
     }
 
-    function setProgress(isNew, txt) {
+    function setProgress(isNew, phase, done, total) {
         const d = document.getElementById('ps-dock');
+        progress = {
+            phase,
+            done: Math.min(Number(total) || 0, Math.max(0, Number(done) || 0)),
+            total: Math.max(0, Number(total) || 0)
+        };
         if (!d) return;
+        d.style.setProperty('--ps-progress', `${progressDegrees()}deg`);
         const b = d.querySelector(`[data-a="${isNew ? 'dl-new' : 'dl'}"]`);
-        if (b) b.textContent = txt;
+        if (b) b.textContent = `${dockLabel()} ${progress.done}/${progress.total}`;
+        const badge = d.querySelector('.ps-badge');
+        const num = d.querySelector('.ps-num');
+        const stage = d.querySelector('.ps-stage');
+        if (badge) badge.classList.add('ps-busy');
+        if (num) num.textContent = progress.done;
+        if (stage) stage.textContent = dockLabel();
         const pill = d.querySelector('.ps-pill');
         const pillN = d.querySelector('.ps-pill-n');
         const pillL = d.querySelector('.ps-pill-l');
         if (pill) pill.classList.add('ps-busy');
-        if (pillN) pillN.textContent = txt;
-        if (pillL) pillL.textContent = '下载中';
+        if (pillN) pillN.textContent = progress.done;
+        if (pillL) pillL.textContent = dockLabel();
     }
 
     // === 网络 ===
@@ -634,10 +693,11 @@
         });
     }
     // === ZIP ===
-    async function makeZip(files) {
+    async function makeZip(files, onProgress) {
         const enc = new TextEncoder();
         const locals = [], centrals = [];
         let off = 0;
+        let packed = 0;
         for (const f of files) {
             const nb = enc.encode(f.name);
             const data = new Uint8Array(await f.blob.arrayBuffer());
@@ -655,6 +715,8 @@
             cv.setUint16(28, nb.length, true); cv.setUint32(42, off, true); ch.set(nb, 46);
             locals.push(lh, data); centrals.push(ch);
             off += lh.length + data.length;
+            packed += 1;
+            if (onProgress) await onProgress(packed);
         }
         const cs = centrals.reduce((s, c) => s + c.length, 0);
         const end = new Uint8Array(22);
@@ -674,7 +736,10 @@
         document.body.appendChild(bg);
         bg.querySelector('.ps-m-cancel').onclick = () => closeModal(bg);
         bg.addEventListener('click', e => { if (e.target === bg) closeModal(bg); });
-        const onK = e => { if (e.key === 'Escape') closeModal(bg); };
+        const onK = e => {
+            if (bg._psKeydown?.(e)) return;
+            if (e.key === 'Escape') closeModal(bg);
+        };
         document.addEventListener('keydown', onK);
         bg._k = onK;
         requestAnimationFrame(() => bg.classList.add('ps-show'));

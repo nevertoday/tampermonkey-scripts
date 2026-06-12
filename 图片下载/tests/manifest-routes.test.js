@@ -10,7 +10,8 @@ const pageUrls = [
   'https://www.pinterest.com/pin/987654321/',
   'https://mp.weixin.qq.com/s/demo',
   'https://500px.com/photo/123456/demo',
-  'https://www.duitang.com/blog/?id=2468'
+  'https://www.duitang.com/blog/?id=2468',
+  'https://huaban.com/pins/5172677444'
 ];
 
 const imageUrls = [
@@ -18,7 +19,8 @@ const imageUrls = [
   'https://i.pinimg.com/originals/a/b/c/photo.jpg',
   'https://mmbiz.qpic.cn/mmbiz_png/demo/640?wx_fmt=png',
   'https://drscdn.500px.org/photo/123456/demo.jpg',
-  'https://c-ssl.dtstatic.com/uploads/item/demo.png'
+  'https://c-ssl.dtstatic.com/uploads/item/demo.png',
+  'https://gd-hbimg-edge.huaban.com/bb2938123d6fdaaa26d7f9c0d69c0f9834b648251a060-DZeFcW?auth_key=demo'
 ];
 
 for (const url of pageUrls) {

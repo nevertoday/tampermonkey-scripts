@@ -3,40 +3,31 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>图片下载助手</title>
+    <title>图拾 Dock</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <main class="app">
-      <header class="topbar">
-        <div>
-          <h1>图片下载助手</h1>
-          <p id="current-site">正在识别当前页面</p>
-        </div>
-        <div class="count" id="selected-count">0</div>
-      </header>
-
       <nav class="tabs" aria-label="主导航">
         <button class="tab active" data-tab="sites" type="button">站点</button>
+        <button class="tab" data-tab="history" type="button">历史</button>
         <button class="tab" data-tab="settings" type="button">设置</button>
-        <button class="tab" data-tab="donate" type="button">打赏</button>
       </nav>
 
       <section class="panel active" id="tab-sites">
-        <div class="actions">
-          <button type="button" data-command="select-visible">选择当前屏幕</button>
-          <button type="button" data-command="clear">清空选择</button>
-          <button type="button" data-command="copy-links">复制图片链接</button>
-        </div>
-        <div class="download-row">
-          <select id="download-mode" aria-label="下载方式">
-            <option value="zip">打包为 ZIP</option>
-            <option value="direct">逐张下载原图</option>
-            <option value="links">保存链接文本</option>
-          </select>
-          <button class="primary" type="button" data-command="download">开始下载</button>
-        </div>
         <div class="site-list" id="site-list"></div>
+      </section>
+
+      <section class="panel" id="tab-history">
+        <div class="history-head">
+          <div>
+            <h2>历史</h2>
+            <p>最近的下载和复制记录</p>
+          </div>
+          <button type="button" id="clear-history">清空</button>
+        </div>
+        <div class="history-filter" id="history-filter" aria-label="按平台过滤历史"></div>
+        <div class="history-list" id="history-list"></div>
       </section>
 
       <section class="panel" id="tab-settings">
@@ -49,6 +40,13 @@
         </label>
         <label class="switch-row">
           <span>
+            <strong>快捷栏默认收起</strong>
+            <small>只显示选择数，需要时再展开操作按钮</small>
+          </span>
+          <input type="checkbox" id="mini-panel-collapsed">
+        </label>
+        <label class="switch-row">
+          <span>
             <strong>图片选择按钮</strong>
             <small>鼠标移到图片上时显示选择按钮</small>
           </span>
@@ -57,10 +55,53 @@
         <label class="switch-row">
           <span>
             <strong>键盘快捷键</strong>
-            <small>S 选择鼠标下图片，A 选择当前屏幕，D 下载，C 清空</small>
+            <small>自定义页面 Dock 的键盘操作</small>
           </span>
           <input type="checkbox" id="enable-shortcuts">
         </label>
+        <section class="shortcut-card" id="shortcut-settings" aria-labelledby="shortcut-title">
+          <div class="shortcut-head">
+            <span>
+              <strong id="shortcut-title">快捷键</strong>
+              <small>输入一个字母或数字，保存后立即同步到网页</small>
+            </span>
+            <button type="button" id="reset-shortcuts">重置</button>
+          </div>
+          <div class="shortcut-grid">
+            <label class="shortcut-field">
+              <span>选图</span>
+              <input class="shortcut-key" data-shortcut-input="select" maxlength="1" autocomplete="off" spellcheck="false" aria-label="选图快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>备用选图</span>
+              <input class="shortcut-key" data-shortcut-input="alternateSelect" maxlength="1" autocomplete="off" spellcheck="false" aria-label="备用选图快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>下载</span>
+              <input class="shortcut-key" data-shortcut-input="download" maxlength="1" autocomplete="off" spellcheck="false" aria-label="下载快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>新批次</span>
+              <input class="shortcut-key" data-shortcut-input="newBatch" maxlength="1" autocomplete="off" spellcheck="false" aria-label="新批次快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>清空</span>
+              <input class="shortcut-key" data-shortcut-input="clear" maxlength="1" autocomplete="off" spellcheck="false" aria-label="清空快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>链接列表</span>
+              <input class="shortcut-key" data-shortcut-input="downloadLinks" maxlength="1" autocomplete="off" spellcheck="false" aria-label="链接列表下载快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>逐张下载</span>
+              <input class="shortcut-key" data-shortcut-input="downloadDirect" maxlength="1" autocomplete="off" spellcheck="false" aria-label="逐张下载快捷键">
+            </label>
+            <label class="shortcut-field">
+              <span>ZIP 压缩包</span>
+              <input class="shortcut-key" data-shortcut-input="downloadZip" maxlength="1" autocomplete="off" spellcheck="false" aria-label="ZIP 压缩包下载快捷键">
+            </label>
+          </div>
+        </section>
         <label class="field">
           <span>默认下载方式</span>
           <select id="default-download-mode">
@@ -69,43 +110,35 @@
             <option value="links">保存链接文本</option>
           </select>
         </label>
-      </section>
-
-      <section class="panel donate" id="tab-donate">
-        <section class="author-section" aria-labelledby="author-title">
-          <div class="author-copy">
-            <span class="section-kicker">作者</span>
-            <h2 id="author-title">打赏作者</h2>
-            <p>这个扩展会继续围绕图片选择、批量下载和多站点适配优化。愿意支持的话，可以任选一种方式扫码。</p>
-          </div>
+        <section class="author-section settings-support" aria-labelledby="author-title">
           <aside class="support-panel" aria-label="打赏作者">
             <div class="support-copy">
-              <span class="section-kicker">支持开发</span>
-              <h3>一点维护经费</h3>
-              <p>微信或算力赞赏，任选一种。</p>
+              <span class="section-kicker">支持作者</span>
+              <h3 id="author-title">打赏作者</h3>
+              <p>这个扩展会继续围绕图片选择、批量下载和多站点适配优化。愿意支持的话，选一种方式扫码即可，二维码只在弹窗里展示。</p>
             </div>
-            <div class="support-qr-list">
-              <figure class="support-qr">
-                <div class="qr-frame">
-                  <img src="../assets/donate-wechat.png" alt="微信打赏作者二维码" width="220" height="220">
-                  <span class="qr-missing">放入 donate-wechat.png</span>
-                </div>
-                <figcaption>微信</figcaption>
-              </figure>
-              <figure class="support-qr">
-                <div class="qr-frame">
-                  <img src="../assets/donate-alipay.png" alt="支付宝打赏作者二维码" width="220" height="220">
-                  <span class="qr-missing">放入 donate-alipay.png</span>
-                </div>
-                <figcaption>支付宝</figcaption>
-              </figure>
-              <figure class="support-qr">
-                <div class="qr-frame">
-                  <img src="../assets/donate-compute.png" alt="算力赞赏作者二维码" width="220" height="220">
-                  <span class="qr-missing">放入 donate-compute.png</span>
-                </div>
-                <figcaption>算力赞赏</figcaption>
-              </figure>
+            <div class="support-options">
+              <button type="button" class="support-option" data-donate="wechat">
+                <span>
+                  <strong>微信</strong>
+                  <small>日常支持</small>
+                </span>
+                <span class="support-mark">扫码</span>
+              </button>
+              <button type="button" class="support-option" data-donate="alipay">
+                <span>
+                  <strong>支付宝</strong>
+                  <small>快捷打赏</small>
+                </span>
+                <span class="support-mark">扫码</span>
+              </button>
+              <button type="button" class="support-option" data-donate="compute">
+                <span>
+                  <strong>银联赞赏</strong>
+                  <small>支持持续适配</small>
+                </span>
+                <span class="support-mark">扫码</span>
+              </button>
             </div>
           </aside>
         </section>

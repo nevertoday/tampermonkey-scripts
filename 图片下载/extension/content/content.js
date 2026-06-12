@@ -43,6 +43,7 @@
     mouseY: -1,
     observer: null,
     heartbeat: 0,
+    floatingRaf: 0,
     dead: false
   };
 
@@ -65,6 +66,10 @@
       cancelAnimationFrame(state.raf);
       clearTimeout(state.raf);
       state.raf = 0;
+    }
+    if (state.floatingRaf) {
+      cancelAnimationFrame(state.floatingRaf);
+      state.floatingRaf = 0;
     }
     state.observer?.disconnect();
     state.observer = null;
@@ -108,6 +113,7 @@
     document.addEventListener('pointermove', (event) => {
       state.mouseX = event.clientX;
       state.mouseY = event.clientY;
+      scheduleFloatingHover();
     }, { passive: true, capture: true });
 
     document.addEventListener('keydown', (event) => {
@@ -186,10 +192,36 @@
 
   function setupStorageListener() {
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area !== 'sync' || !changes.settings) return;
-      state.settings = normalizeSettings(changes.settings.newValue);
-      applySettingsChange();
+      if (area === 'sync' && changes.settings) {
+        state.settings = normalizeSettings(changes.settings.newValue);
+        applySettingsChange();
+        return;
+      }
+      if (area === 'local' && changes[selectedKey()]) {
+        applyExternalSelection(changes[selectedKey()].newValue);
+      }
     });
+  }
+
+  // Selection is shared per site (key `selected.<siteId>`), so every tab on the
+  // same site must reflect the same set. When another tab edits the selection,
+  // re-sync this tab's in-memory map and UI instead of keeping a stale, diverging count.
+  function applyExternalSelection(entries) {
+    const incoming = new Map(Array.isArray(entries) ? entries : []);
+    if (sameSelection(incoming, state.selected)) return;
+    state.selected = incoming;
+    refreshSelectionUI();
+    updateMiniPanel();
+    pulseMiniCount();
+    syncRuntime();
+  }
+
+  function sameSelection(a, b) {
+    if (a.size !== b.size) return false;
+    for (const [key, url] of a) {
+      if (b.get(key) !== url) return false;
+    }
+    return true;
   }
 
   async function applySettingsChange() {
@@ -276,10 +308,40 @@
     const rect = img.getBoundingClientRect();
     const hidden = rect.width < 4 || rect.height < 4 || rect.bottom <= 0 || rect.top >= window.innerHeight || rect.right <= 0 || rect.left >= window.innerWidth;
     button.classList.toggle('idx-floating-hidden', hidden);
-    if (hidden) return;
+    if (hidden) {
+      button.classList.remove('idx-floating-visible');
+      return;
+    }
     const offset = adapter.floatingControlOffset?.(img, rect) || { x: 8, y: rect.height > 96 ? 56 : 8 };
     button.style.setProperty('left', `${Math.max(8, Math.round(rect.left + offset.x))}px`, 'important');
     button.style.setProperty('top', `${Math.max(8, Math.round(rect.top + offset.y))}px`, 'important');
+    updateFloatingHover(button, img, rect);
+  }
+
+  function scheduleFloatingHover() {
+    if (state.dead || state.floatingRaf) return;
+    state.floatingRaf = requestAnimationFrame(() => {
+      state.floatingRaf = 0;
+      document.querySelectorAll('.idx-floating-select-btn').forEach((button) => {
+        if (button._idxImage) updateFloatingHover(button, button._idxImage);
+      });
+    });
+  }
+
+  function updateFloatingHover(button, img, rect = img.getBoundingClientRect()) {
+    if (button.classList.contains('idx-floating-hidden')) return;
+    if (state.settings.showHoverButtons === false) {
+      button.classList.remove('idx-floating-visible');
+      return;
+    }
+    const overImage = pointerOverRect(rect);
+    const overButton = pointerOverRect(button.getBoundingClientRect());
+    button.classList.toggle('idx-floating-visible', overImage || overButton);
+  }
+
+  function pointerOverRect(rect) {
+    if (state.mouseX < 0 || state.mouseY < 0 || !rect) return false;
+    return state.mouseX >= rect.left && state.mouseX <= rect.right && state.mouseY >= rect.top && state.mouseY <= rect.bottom;
   }
 
   function cleanupFloatingButtons(images) {

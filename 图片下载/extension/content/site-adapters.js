@@ -6,24 +6,30 @@
       id: 'xiaohongshu',
       name: '小红书',
       defaultPrefix: 'xiaohongshu',
+      theme: {
+        accent: '#ff2442',
+        rgb: '255, 36, 66',
+        dark: '#d81e38',
+        badge: '小红书'
+      },
       hosts: ['xiaohongshu.com'],
       matches: () => /(^|\.)xiaohongshu\.com$/i.test(location.hostname),
       images(root = document) {
         return Array.from(root.querySelectorAll('img')).filter((img) => {
           const cls = `${img.className || ''} ${img.alt || ''}`.toLowerCase();
-          if (/avatar|author|user|emoji|icon|logo|badge|comment/.test(cls)) return false;
+          if (/avatar|author|user|emoji|icon|logo|badge|comment|qrcode|qr-code|captcha|verify/.test(cls)) return false;
           let el = img;
           for (let level = 0; level < 5; level += 1) {
             el = el?.parentElement;
             if (!el) break;
             const mark = `${el.id || ''} ${el.className || ''}`.toLowerCase();
-            if (/avatar|author|comment|interaction|engage/.test(mark)) return false;
+            if (/avatar|author|comment|interaction|engage|qrcode|qr-code|captcha|verify/.test(mark)) return false;
           }
           return hasReasonableSize(img, 80, 6000) && Boolean(this.url(img));
         });
       },
       hostFor(img) {
-        return img.closest('.swiper-slide, .note-item, section.note-item, .note-card, [data-note-id], [class*="note-item"], [class*="NoteItem"]') || img.parentElement;
+        return img.closest('.swiper-slide, [class*="swiper-slide"]') || img.parentElement;
       },
       url(img) {
         const srcset = parseSrcset(img.getAttribute('srcset'));
@@ -31,7 +37,7 @@
         return absoluteUrl(raw);
       },
       key(img, url) {
-        const container = this.hostFor(img);
+        const container = img.closest('.note-item, section.note-item, .note-card, [data-note-id], [class*="note-item"], [class*="NoteItem"]') || this.hostFor(img);
         const noteId = container?.dataset?.noteId || container?.getAttribute?.('data-note-id') || noteIdFromLinks(container) || noteIdFromLocation();
         return `${noteId || 'xhs'}-${hash(url).slice(0, 8)}`;
       }
@@ -40,6 +46,12 @@
       id: 'pinterest',
       name: 'Pinterest',
       defaultPrefix: 'pinterest',
+      theme: {
+        accent: '#bd081c',
+        rgb: '189, 8, 28',
+        dark: '#8c0617',
+        badge: 'Pinterest'
+      },
       hosts: ['pinterest.com'],
       matches: () => /(^|\.)pinterest\.com$/i.test(location.hostname),
       images(root = document) {
@@ -47,6 +59,14 @@
       },
       hostFor(img) {
         return img.closest('[data-grid-item], [data-test-id="closeup-visual-container"], a[href*="/pin/"]') || img.parentElement;
+      },
+      usesFloatingControls(img) {
+        return /pinimg\.com/i.test(img.currentSrc || img.src || '');
+      },
+      floatingControlOffset(img, rect) {
+        return img.closest('[data-test-id="closeup-visual-container"]') || rect.height > 140
+          ? { x: 10, y: 14 }
+          : { x: 8, y: 8 };
       },
       url(img) {
         const srcset = img.getAttribute('srcset');
@@ -72,6 +92,12 @@
       id: 'wechat',
       name: '微信公众号',
       defaultPrefix: 'wechat',
+      theme: {
+        accent: '#07c160',
+        rgb: '7, 193, 96',
+        dark: '#128c4a',
+        badge: '微信'
+      },
       hosts: ['mp.weixin.qq.com'],
       matches: () => location.hostname === 'mp.weixin.qq.com',
       images(root = document) {
@@ -107,6 +133,12 @@
       id: '500px',
       name: '500px',
       defaultPrefix: '500px',
+      theme: {
+        accent: '#0099e5',
+        rgb: '0, 153, 229',
+        dark: '#087db8',
+        badge: '500px'
+      },
       hosts: ['500px.com'],
       matches: () => /(^|\.)500px\.com$/i.test(location.hostname),
       images(root = document) {
@@ -135,6 +167,12 @@
       id: 'duitang',
       name: '堆糖',
       defaultPrefix: 'duitang',
+      theme: {
+        accent: '#e86f8f',
+        rgb: '232, 111, 143',
+        dark: '#c65372',
+        badge: '堆糖'
+      },
       hosts: ['duitang.com'],
       matches: () => /(^|\.)duitang\.com$/i.test(location.hostname),
       images(root = document) {
@@ -157,6 +195,47 @@
       key(img, url) {
         const blogId = img.closest('a[href*="/blog/"]')?.href?.match(/[?&]id=(\d+)/)?.[1] || location.href.match(/\/blog\/\?id=(\d+)/)?.[1];
         return blogId ? `dt-${blogId}-${hash(url).slice(0, 8)}` : `dt-${hash(url).slice(0, 8)}`;
+      }
+    },
+    {
+      id: 'huaban',
+      name: '花瓣',
+      defaultPrefix: 'huaban',
+      theme: {
+        accent: '#c95f68',
+        rgb: '201, 95, 104',
+        dark: '#9e414d',
+        badge: '花瓣'
+      },
+      hosts: ['huaban.com'],
+      matches: () => /(^|\.)huaban\.com$/i.test(location.hostname),
+      images(root = document) {
+        return Array.from(root.querySelectorAll('img')).filter((img) => {
+          const url = this.url(img);
+          if (!/gd-hbimg-(?:edge|other)\.huaban\.com/i.test(url)) return false;
+          if (!huabanPinLink(img) && !huabanPinIdFromLocation()) return false;
+          const mark = `${img.className || ''} ${img.id || ''} ${img.alt || ''}`.toLowerCase();
+          if (/avatar|user|icon|logo|emoji|qrcode|qr-code|captcha|vip|subscribe/.test(mark)) return false;
+          if (/(?:_sq\d+|_fw86)(?:webp)?(?:[?#]|$)/i.test(img.currentSrc || img.src || '')) return false;
+          return hasReasonableSize(img, 80, 6000) && Boolean(url);
+        });
+      },
+      hostFor(img) {
+        return img.closest('a[href*="/pins/"], [data-pin-id], [data-id]') || img.parentElement;
+      },
+      usesFloatingControls(img) {
+        return Boolean(huabanPinLink(img));
+      },
+      floatingControlOffset() {
+        return { x: 8, y: 8 };
+      },
+      url(img) {
+        const raw = parseSrcset(img.getAttribute('srcset')) || img.currentSrc || img.src || img.getAttribute('data-src') || img.getAttribute('data-original') || '';
+        return normalizeHuaban(raw);
+      },
+      key(img, url) {
+        const pinId = huabanPinIdFromImage(img) || huabanPinIdFromLocation();
+        return pinId ? `hb-${pinId}-${hash(url).slice(0, 8)}` : `hb-${hash(url).slice(0, 8)}`;
       }
     }
   ];
@@ -212,6 +291,40 @@
 
   function noteIdFromLocation() {
     return location.href.match(/\/(?:explore|discovery\/item)\/([^/?#]+)/)?.[1] || null;
+  }
+
+  function huabanPinLink(img) {
+    const link = img.closest?.('a[href*="/pins/"]');
+    if (!link?.href) return null;
+    try {
+      const url = new URL(link.href, location.href);
+      return /(^|\.)huaban\.com$/i.test(url.hostname) && /\/pins\/\d+/i.test(url.pathname) ? link : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function huabanPinIdFromImage(img) {
+    return huabanPinLink(img)?.href?.match(/\/pins\/(\d+)/)?.[1] || img.closest?.('[data-pin-id]')?.getAttribute?.('data-pin-id') || null;
+  }
+
+  function huabanPinIdFromLocation() {
+    return location.href.match(/\/pins\/(\d+)/)?.[1] || null;
+  }
+
+  function normalizeHuaban(url) {
+    const absolute = absoluteUrl(url);
+    if (!absolute) return '';
+    try {
+      const parsed = new URL(absolute);
+      if (/gd-hbimg-(?:edge|other)\.huaban\.com$/i.test(parsed.hostname)) {
+        parsed.pathname = parsed.pathname.replace('/small/', '/').replace(/_(?:fw|sq)\d+(?:webp)?$/i, '');
+      }
+      parsed.hash = '';
+      return parsed.href;
+    } catch (_) {
+      return absolute;
+    }
   }
 
   function hash(input) {
