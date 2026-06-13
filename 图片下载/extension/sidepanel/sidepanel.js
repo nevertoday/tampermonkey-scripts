@@ -110,6 +110,7 @@ async function init() {
   bindTabs();
   bindHistory();
   bindDonation();
+  bindLinkDownload();
   renderSettings();
   renderSites();
   await loadHistory();
@@ -148,6 +149,94 @@ function bindDonation() {
   document.querySelectorAll('[data-donate]').forEach((button) => {
     button.addEventListener('click', () => showDonationModal(button.dataset.donate));
   });
+}
+
+function bindLinkDownload() {
+  document.getElementById('open-link-download')?.addEventListener('click', showLinkDownloadModal);
+}
+
+function parseLinks(text) {
+  const seen = new Set();
+  return String(text || '')
+    .split(/[\s,]+/)
+    .map((item) => item.trim())
+    .filter((item) => /^https?:\/\//i.test(item))
+    .map((url) => url.split('#')[0])
+    .filter((url) => {
+      if (seen.has(url)) return false;
+      seen.add(url);
+      return true;
+    })
+    .map((url, index) => ({ id: `link-${index}`, url }));
+}
+
+function showLinkDownloadModal() {
+  const modal = showPanelModal({
+    eyebrow: '链接下载',
+    title: '粘贴图片链接',
+    description: '每行一个图片直链，选择下载方式即可，无需打开网页。',
+    body: `
+      <div class="link-dl" style="--history-accent: var(--accent); --history-rgb: var(--accent-rgb); --history-dark: var(--accent-hover);">
+        <textarea id="link-dl-input" spellcheck="false" placeholder="https://example.com/a.jpg&#10;https://example.com/b.png&#10;https://example.com/c.webp"></textarea>
+        <div class="link-dl-row">
+          <label class="link-dl-prefix"><span>前缀</span><input id="link-dl-prefix" type="text" value="links" aria-label="文件名前缀"></label>
+          <span class="link-dl-count" id="link-dl-count">0 条链接</span>
+        </div>
+        <div class="history-download-actions">
+          <button type="button" data-link-mode="links" disabled>链接文本</button>
+          <button type="button" data-link-mode="direct" disabled>逐张下载</button>
+          <button type="button" class="history-download-primary" data-link-mode="zip" disabled>ZIP 打包</button>
+        </div>
+      </div>
+    `
+  });
+  const input = modal.querySelector('#link-dl-input');
+  const prefixInput = modal.querySelector('#link-dl-prefix');
+  const countEl = modal.querySelector('#link-dl-count');
+  const actionButtons = modal.querySelectorAll('[data-link-mode]');
+  const refresh = () => {
+    const count = parseLinks(input.value).length;
+    countEl.textContent = `${count} 条链接`;
+    actionButtons.forEach((button) => { button.disabled = count === 0; });
+  };
+  input.addEventListener('input', refresh);
+  actionButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      runLinkDownload(parseLinks(input.value), prefixInput.value.trim() || 'links', button.dataset.linkMode, button, modal);
+    });
+  });
+  refresh();
+  window.setTimeout(() => input.focus(), 30);
+}
+
+async function runLinkDownload(entries, prefix, mode, button, modal) {
+  if (!entries.length) {
+    setStatus('没有识别到有效的图片链接');
+    return;
+  }
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = '处理中';
+  try {
+    const response = await chrome.runtime.sendMessage({
+      target: 'image-downloader-background',
+      type: 'download',
+      payload: {
+        mode,
+        prefix: prefix || 'links',
+        site: { id: 'links', name: '链接下载' },
+        entries
+      }
+    });
+    if (!response?.ok) throw new Error(response?.error || '下载失败');
+    setStatus(historyDownloadMessage(response.result || {}));
+    closePanelModal(modal);
+  } catch (error) {
+    setStatus(String(error?.message || error || '下载失败'));
+  } finally {
+    button.disabled = false;
+    button.textContent = label;
+  }
 }
 
 function bindTabs() {
