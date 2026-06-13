@@ -85,7 +85,12 @@
         const fromAttr = pinEl?.getAttribute('data-test-pin-id');
         const fromLink = host?.querySelector?.('a[href*="/pin/"]')?.href?.match(/\/pin\/(\d+)/)?.[1];
         const fromLocation = location.href.match(/\/pin\/(\d+)/)?.[1];
-        return fromAttr || fromLink || fromLocation || `pin-${hash(url).slice(0, 10)}`;
+        const pinId = fromAttr || fromLink || fromLocation;
+        // Always fold in the URL hash: on a /pin/ closeup page fromLocation is the
+        // page's pin id, shared by every image lacking its own pin link. Without the
+        // hash those distinct images collide on one key and selecting one lights up
+        // all of them (looks like "select all").
+        return pinId ? `pin-${pinId}-${hash(url).slice(0, 8)}` : `pin-${hash(url).slice(0, 10)}`;
       }
     },
     {

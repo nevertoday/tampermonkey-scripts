@@ -163,7 +163,7 @@ runCase({
   siteId: 'pinterest',
   image: pinImg,
   expectUrlIncludes: /\/originals\/a\/b\/c\/photo\.jpg$/,
-  expectKeyPrefix: /^987654321$/
+  expectKeyPrefix: /^pin-987654321-[a-f0-9]{8}$/
 });
 {
   const { bridge } = loadAdapters({ hostname: 'www.pinterest.com', href: 'https://www.pinterest.com/pin/987654321/' });
@@ -178,6 +178,16 @@ runCase({
   });
   assert.equal(adapter.usesFloatingControls(closeupImg), true, 'Pinterest closeup images should use body-level floating controls');
   assert.equal(adapter.usesFloatingControls(pinImg), true, 'Pinterest feed/grid images should use body-level floating controls so card links cannot intercept clicks');
+
+  // Regression: on a /pin/<id>/ closeup page, images without their own pin link all
+  // fall back to the page's pin id. Their keys must still differ by URL, otherwise
+  // selecting one image marks every same-id image as selected ("select all" bug).
+  const closeupA = new FakeElement({ src: 'https://i.pinimg.com/originals/1/1/1/a.jpg', naturalWidth: 800, naturalHeight: 800 });
+  const closeupB = new FakeElement({ src: 'https://i.pinimg.com/originals/2/2/2/b.jpg', naturalWidth: 800, naturalHeight: 800 });
+  const keyA = adapter.key(closeupA, adapter.url(closeupA));
+  const keyB = adapter.key(closeupB, adapter.url(closeupB));
+  assert.match(keyA, /^pin-987654321-/, 'closeup key keeps the page pin id as a prefix');
+  assert.notEqual(keyA, keyB, 'different closeup images must not collide on one selection key');
 }
 
 const wxImg = new FakeElement({
