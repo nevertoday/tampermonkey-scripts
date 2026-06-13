@@ -1,3 +1,5 @@
+importScripts('lib/image-cache.js');
+
 const DEFAULT_CONCURRENCY = 4;
 const HISTORY_KEY = 'downloadHistory';
 const HISTORY_LIMIT = 50;
@@ -23,8 +25,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'cache-entries') {
+    cacheEntries(message.payload?.entries || [])
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
+    return true;
+  }
+
+  if (message.type === 'clear-image-cache') {
+    ImageCache.clear()
+      .then((ok) => sendResponse({ ok }))
+      .catch((error) => sendResponse({ ok: false, error: String(error?.message || error) }));
+    return true;
+  }
+
   return false;
 });
+
+// Best-effort: silently fetch and store image bytes so a record stays usable after
+// its CDN links expire. Skips anything already cached. Never throws to the caller.
+async function cacheEntries(entries) {
+  const list = Array.isArray(entries) ? entries.filter((entry) => /^https?:\/\//i.test(entry?.url || '')) : [];
+  if (!list.length) return;
+  await parallel(list, DEFAULT_CONCURRENCY, async (entry) => {
+    try {
+      if (await ImageCache.has(entry.url)) return;
+      const response = await fetch(entry.url, { credentials: 'omit', cache: 'force-cache' });
+      if (!response.ok) return;
+      await ImageCache.put(entry.url, await response.blob());
+    } catch (_) {
+      // best-effort
+    }
+  });
+}
 
 async function handleDownload(payload, sender = {}) {
   const entries = Array.isArray(payload.entries) ? payload.entries : [];
@@ -41,6 +74,7 @@ async function handleDownload(payload, sender = {}) {
     await downloadDataUrl(textDataUrl(body), `${baseName}.txt`);
     const result = { count: entries.length, failed: 0, mode };
     await recordHistory(payload, result);
+    cacheEntries(entries).catch(() => {}); // silently keep bytes so links survive expiry
     return result;
   }
 
@@ -49,10 +83,12 @@ async function handleDownload(payload, sender = {}) {
     await progress(0);
     for (let index = 0; index < entries.length; index += 1) {
       const entry = entries[index];
-      const filename = `${baseName}-${String(index + 1).padStart(3, '0')}.${ext(entry.url)}`;
       try {
+        // Prefer cached bytes: survives expired CDN links and avoids hotlink 403s.
+        const cached = await ImageCache.getBlob(entry.url);
+        const filename = `${baseName}-${String(index + 1).padStart(3, '0')}.${ext(entry.url, cached?.type)}`;
         await chrome.downloads.download({
-          url: entry.url,
+          url: cached ? await blobToDataUrl(cached) : entry.url,
           filename,
           saveAs: false,
           conflictAction: 'uniquify'
@@ -66,6 +102,7 @@ async function handleDownload(payload, sender = {}) {
     const result = { count: entries.length - failed, failed, mode };
     await progress({ phase: 'done', done: entries.length });
     await recordHistory(payload, result);
+    cacheEntries(entries).catch(() => {}); // backfill any not-yet-cached bytes
     return result;
   }
 
@@ -75,9 +112,14 @@ async function handleDownload(payload, sender = {}) {
   await progress({ phase: 'fetching', done: 0 });
   await parallel(entries, DEFAULT_CONCURRENCY, async (entry, index) => {
     try {
-      const response = await fetch(entry.url, { credentials: 'omit', cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
+      // Cache-first so re-packing works even after the original link expires.
+      let blob = await ImageCache.getBlob(entry.url);
+      if (!blob) {
+        const response = await fetch(entry.url, { credentials: 'omit', cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        blob = await response.blob();
+        ImageCache.put(entry.url, blob).catch(() => {});
+      }
       files.push({
         name: `${baseName}/${String(index + 1).padStart(3, '0')}.${ext(entry.url, blob.type)}`,
         blob

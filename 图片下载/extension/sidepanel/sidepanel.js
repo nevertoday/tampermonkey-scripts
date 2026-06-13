@@ -165,6 +165,7 @@ function bindHistory() {
     historyItems = [];
     historyFilter = 'all';
     await chrome.storage.local.set({ [HISTORY_KEY]: [] }).catch(() => {});
+    ImageCache?.clear?.().catch(() => {}); // free cached image bytes for cleared records
     renderHistoryFilter();
     renderHistory();
   });
@@ -547,17 +548,42 @@ function renderHistoryPreview(item) {
 }
 
 function historyPreviewCard(entry, index) {
+  // src is resolved later (resolveThumb): cached bytes first, network URL as fallback.
   return `
     <a class="history-preview-card" href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer" title="${escapeHtml(entry.url)}">
-      <img src="${escapeHtml(entry.url)}" alt="历史图片 ${index + 1}" loading="lazy">
+      <img data-url="${escapeHtml(entry.url)}" alt="历史图片 ${index + 1}" loading="lazy">
       <span>${String(index + 1).padStart(2, '0')}</span>
     </a>
   `;
 }
 
+async function resolveThumb(card, objectUrls) {
+  const img = card.querySelector('img');
+  if (!img) return;
+  const url = img.dataset.url;
+  let blob = null;
+  try {
+    blob = await ImageCache.getBlob(url);
+  } catch (_) {
+    blob = null;
+  }
+  if (blob) {
+    const objectUrl = URL.createObjectURL(blob);
+    objectUrls.push(objectUrl);
+    img.src = objectUrl;
+  } else {
+    // No cached copy — fall back to the live link (DNR adds the Referer). May 404 if expired.
+    img.src = url;
+  }
+}
+
 function setupHistoryPreviewGrid(grid, entries) {
   const BATCH = 12;
   let rendered = 0;
+  // Revoke object URLs when the modal closes to avoid leaking memory.
+  const objectUrls = [];
+  const modal = grid.closest('.panel-modal-backdrop');
+  if (modal) modal._objectUrls = objectUrls;
 
   const appendBatch = () => {
     const slice = entries.slice(rendered, rendered + BATCH);
@@ -571,6 +597,7 @@ function setupHistoryPreviewGrid(grid, entries) {
         img.addEventListener('load', () => card.classList.remove('is-broken'));
       }
       grid.appendChild(card);
+      resolveThumb(card, objectUrls);
     });
     rendered += slice.length;
   };
@@ -711,6 +738,10 @@ function showPanelModal({ eyebrow = '', title, description = '', body = '' }) {
 function closePanelModal(modal = activeModal) {
   if (!modal) return;
   if (modal._onKey) document.removeEventListener('keydown', modal._onKey);
+  if (Array.isArray(modal._objectUrls)) {
+    modal._objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    modal._objectUrls = [];
+  }
   modal.classList.remove('is-open');
   if (activeModal === modal) activeModal = null;
   const restoreFocus = modal._restoreFocus;

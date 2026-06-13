@@ -749,6 +749,7 @@
     const body = links.join('\n');
     try {
       await navigator.clipboard.writeText(body);
+      const entries = selectedEntries();
       await addHistory({
         type: 'copy',
         siteId: adapter.id,
@@ -757,8 +758,9 @@
         mode: 'links',
         count: links.length,
         failed: 0,
-        entries: selectedEntries()
+        entries
       });
+      requestCacheEntries(entries); // silently keep bytes so copied links survive expiry
       toast(`已复制 ${links.length} 个链接`);
     } catch (_) {
       showLinksModal(body);
@@ -831,6 +833,19 @@
       });
       await chrome.storage.local.set({ [HISTORY_KEY]: history.slice(0, HISTORY_LIMIT) });
     } catch (_) {}
+  }
+
+  function requestCacheEntries(entries) {
+    if (!entries?.length || !extensionAlive()) return;
+    try {
+      chrome.runtime.sendMessage({
+        target: 'image-downloader-background',
+        type: 'cache-entries',
+        payload: { entries }
+      }).catch(() => {});
+    } catch (_) {
+      // best-effort
+    }
   }
 
   function imageContainingPoint(x, y) {

@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图拾 Dock — 在图片网站上批量拾取、下载原图</title>
+<meta name="description" content="图拾 Dock：在小红书、Pinterest、花瓣、微信公众号、500px、堆糖上悬停选图，一键打包下载原图。Chrome 扩展 + 油猴脚本，纯本地、不上传。">
+<style>
+  :root{
+    --ink:#000;
+    --paper:#fff;
+    --g1:#f5f5f5;
+    --g2:#e4e4e4;
+    --g3:#bdbdbd;
+    --g4:#8a8a8a;
+    --g5:#555;
+    --line:#000;
+    --maxw:1180px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;border-radius:0!important;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    font-size:16px;
+  }
+  a{color:inherit;text-decoration:none;}
+  img{display:block;max-width:100%;}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
+  .mono{font-family:var(--mono);}
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--g5);
+    display:inline-flex;
+    gap:10px;
+    align-items:center;
+  }
+  .eyebrow b{color:var(--ink);font-weight:700;}
+
+  /* ---- nav ---- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:var(--paper);
+    border-bottom:2px solid var(--line);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.12em;font-size:15px;display:flex;align-items:center;gap:10px;}
+  .brand .sq{width:14px;height:14px;background:var(--ink);display:inline-block;}
+  .navlinks{display:flex;gap:0;font-family:var(--mono);font-size:13px;}
+  .navlinks a{padding:8px 14px;border-left:1px solid var(--g2);color:var(--g5);}
+  .navlinks a:hover{background:var(--ink);color:var(--paper);}
+  .navlinks a.gh{color:var(--ink);font-weight:700;}
+
+  /* ---- hero ---- */
+  header.hero{border-bottom:2px solid var(--line);}
+  .hero .wrap{padding-top:72px;padding-bottom:0;}
+  .hero h1{
+    font-size:clamp(56px,12vw,160px);
+    line-height:.92;
+    letter-spacing:-.03em;
+    font-weight:800;
+  }
+  .hero h1 small{display:block;font-family:var(--mono);font-size:clamp(14px,2.4vw,24px);font-weight:600;letter-spacing:.32em;color:var(--g4);margin-bottom:18px;}
+  .hero .tag{font-size:clamp(18px,2.6vw,30px);font-weight:600;max-width:780px;margin-top:28px;}
+  .hero .sub{color:var(--g5);max-width:620px;margin-top:16px;font-size:16px;}
+  .cta{display:flex;flex-wrap:wrap;gap:0;margin:40px 0 64px;border:2px solid var(--line);width:max-content;max-width:100%;}
+  .btn{
+    font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.04em;
+    padding:16px 26px;display:inline-flex;align-items:center;gap:10px;cursor:pointer;
+    background:var(--paper);color:var(--ink);border:none;
+  }
+  .btn + .btn{border-left:2px solid var(--line);}
+  .btn.solid{background:var(--ink);color:var(--paper);}
+  .btn:hover{background:var(--ink);color:var(--paper);}
+  .btn.solid:hover{background:var(--paper);color:var(--ink);}
+
+  /* ---- stat strip ---- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--line);}
+  .stat{padding:28px 24px;border-left:1px solid var(--g2);}
+  .stat:first-child{border-left:none;}
+  .stat .n{font-size:clamp(34px,5vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1;}
+  .stat .l{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--g5);margin-top:12px;}
+
+  /* ---- section ---- */
+  section{border-bottom:2px solid var(--line);}
+  .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding:64px 0 36px;flex-wrap:wrap;}
+  .sechead h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.05;max-width:18ch;}
+  .sechead p{color:var(--g5);max-width:42ch;}
+
+  /* problem two-col */
+  .twocol{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--g2);}
+  .twocol > div{padding:40px 0;}
+  .twocol > div:last-child{border-left:1px solid var(--g2);padding-left:40px;}
+  .twocol h3{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);margin-bottom:20px;}
+  .twocol ul{list-style:none;}
+  .twocol li{padding:14px 0;border-top:1px solid var(--g2);display:flex;gap:14px;}
+  .twocol li:first-child{border-top:none;}
+  .twocol li .ix{font-family:var(--mono);color:var(--g3);font-size:13px;min-width:24px;}
+
+  /* site grid */
+  .grid{display:grid;gap:0;border-left:1px solid var(--g2);border-top:1px solid var(--g2);}
+  .sites{grid-template-columns:repeat(3,1fr);margin-bottom:64px;}
+  .cell{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:28px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;transition:background .12s,color .12s;}
+  .cell:hover{background:var(--ink);color:var(--paper);}
+  .cell .idx{font-family:var(--mono);font-size:12px;color:var(--g4);letter-spacing:.1em;}
+  .cell:hover .idx{color:var(--g3);}
+  .cell .name{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:8px;}
+  .cell .dom{font-family:var(--mono);font-size:13px;color:var(--g5);margin-top:6px;}
+  .cell:hover .dom{color:var(--g3);}
+
+  /* feature grid */
+  .feats{grid-template-columns:repeat(3,1fr);margin-bottom:64px;}
+  .feat{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:30px 28px;}
+  .feat .fn{font-family:var(--mono);font-size:12px;color:var(--g3);letter-spacing:.12em;}
+  .feat h3{font-size:20px;font-weight:800;margin:14px 0 10px;letter-spacing:-.01em;}
+  .feat p{color:var(--g5);font-size:15px;}
+
+  /* shots */
+  .shots{margin-bottom:64px;display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
+  .shot{border:2px solid var(--line);background:var(--g1);}
+  .shot img{width:100%;filter:grayscale(100%) contrast(1.04);transition:filter .2s;}
+  .shot:hover img{filter:grayscale(0%);}
+  .shot .cap{border-top:2px solid var(--line);padding:12px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--g5);display:flex;justify-content:space-between;}
+  .shot.wide{grid-column:1 / -1;}
+
+  /* flavors */
+  .flavors{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--g2);margin-bottom:64px;}
+  .flavor{padding:40px;border-right:1px solid var(--g2);}
+  .flavor:last-child{border-right:none;}
+  .flavor .k{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--g5);}
+  .flavor h3{font-size:26px;font-weight:800;margin:12px 0 14px;}
+  .flavor p{color:var(--g5);margin-bottom:22px;}
+  .flavor ul{list-style:none;margin-bottom:26px;}
+  .flavor li{padding:10px 0;border-top:1px solid var(--g2);font-size:15px;}
+  .flavor .linkbtn{font-family:var(--mono);font-size:13px;font-weight:700;border:2px solid var(--line);padding:12px 18px;display:inline-flex;gap:10px;align-items:center;}
+  .flavor .linkbtn:hover{background:var(--ink);color:var(--paper);}
+
+  /* install steps */
+  .steps{grid-template-columns:repeat(4,1fr);margin-bottom:64px;}
+  .step{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:28px;}
+  .step .num{font-size:40px;font-weight:800;letter-spacing:-.02em;}
+  .step h3{font-size:16px;font-weight:700;margin:14px 0 8px;}
+  .step p{color:var(--g5);font-size:14px;}
+  .step code{font-family:var(--mono);font-size:13px;background:var(--g1);border:1px solid var(--g2);padding:1px 6px;}
+
+  /* big cta */
+  .endcta{background:var(--ink);color:var(--paper);}
+  .endcta .wrap{padding:80px 24px;text-align:center;}
+  .endcta h2{font-size:clamp(32px,6vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1;}
+  .endcta p{color:var(--g3);margin:20px auto 36px;max-width:50ch;}
+  .endcta .btn{border:2px solid var(--paper);}
+  .endcta .cta{border-color:var(--paper);margin:0 auto;}
+  .endcta .btn{background:var(--ink);color:var(--paper);}
+  .endcta .btn.solid{background:var(--paper);color:var(--ink);}
+  .endcta .btn:hover{background:var(--paper);color:var(--ink);}
+  .endcta .btn.solid:hover{background:var(--ink);color:var(--paper);}
+  .endcta .btn + .btn{border-left:2px solid var(--paper);}
+
+  /* footer */
+  footer{background:var(--paper);}
+  footer .wrap{padding:40px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--g5);}
+  footer a{border-bottom:1px solid var(--ink);color:var(--ink);}
+  footer a:hover{background:var(--ink);color:var(--paper);}
+
+  @media(max-width:860px){
+    .stats{grid-template-columns:repeat(2,1fr);}
+    .stat:nth-child(3){border-left:none;}
+    .sites,.feats{grid-template-columns:repeat(2,1fr);}
+    .steps{grid-template-columns:repeat(2,1fr);}
+    .twocol,.flavors{grid-template-columns:1fr;}
+    .twocol > div:last-child{border-left:none;border-top:1px solid var(--g2);padding-left:0;}
+    .flavor{border-right:none;border-bottom:1px solid var(--g2);}
+    .navlinks .hidem{display:none;}
+  }
+  @media(max-width:560px){
+    .sites,.feats{grid-template-columns:1fr;}
+    .shots{grid-template-columns:1fr;}
+    .navlinks a:not(.gh){display:none;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="sq"></span>图拾 DOCK</a>
+    <div class="navlinks">
+      <a class="hidem" href="#sites">站点</a>
+      <a class="hidem" href="#features">能力</a>
+      <a class="hidem" href="#install">安装</a>
+      <a class="gh" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <h1><small>图片拾取工作台 / IMAGE PICKER</small>图拾 Dock</h1>
+    <p class="tag">把散落在网页里的好图，一张张拾起来。</p>
+    <p class="sub">在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。</p>
+    <div class="cta">
+      <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">在 GitHub 获取 →</a>
+      <a class="btn" href="#install">安装方法</a>
+    </div>
+  </div>
+  <div class="wrap" style="padding:0 24px;">
+    <div class="stats">
+      <div class="stat"><div class="n">6</div><div class="l">支持站点</div></div>
+      <div class="stat"><div class="n">3</div><div class="l">下载方式</div></div>
+      <div class="stat"><div class="n">0</div><div class="l">服务器上传</div></div>
+      <div class="stat"><div class="n">100%</div><div class="l">本地运行</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="why">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>图片网站擅长展示，却不擅长帮你整理。</h2>
+      <p class="eyebrow"><b>01</b> 它解决的问题</p>
+    </div>
+    <div class="twocol">
+      <div>
+        <h3>过去的麻烦</h3>
+        <ul>
+          <li><span class="ix">01</span>右键保存太慢，连续存几十张打断思路。</li>
+          <li><span class="ix">02</span>头像、图标、二维码混在一起，通用下载器误抓。</li>
+          <li><span class="ix">03</span>缩略图、懒加载、瀑布流，手动找原图很费劲。</li>
+          <li><span class="ix">04</span>不同站点脚本分散，开关与快捷键各不相同。</li>
+          <li><span class="ix">05</span>滚动几屏后，记不清自己刚刚选过哪些。</li>
+        </ul>
+      </div>
+      <div>
+        <h3>图拾的方式</h3>
+        <ul>
+          <li><span class="ix">→</span>每个站点单独适配，精准识别内容原图。</li>
+          <li><span class="ix">→</span>悬停出现「＋」，点一下选中，蓝/黑框持久标记。</li>
+          <li><span class="ix">→</span>自动把缩略图还原为最高画质原图链接。</li>
+          <li><span class="ix">→</span>统一的侧边栏：站点、历史、设置、前缀集中管理。</li>
+          <li><span class="ix">→</span>选择跨标签页、跨滚动持久保留，计数实时联动。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sites">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>六个主流平台，一套操作。</h2>
+      <p class="eyebrow"><b>02</b> 支持站点</p>
+    </div>
+    <div class="grid sites">
+      <div class="cell"><span class="idx">01</span><div><div class="name">小红书</div><div class="dom">xiaohongshu.com</div></div></div>
+      <div class="cell"><span class="idx">02</span><div><div class="name">Pinterest</div><div class="dom">pinterest.com</div></div></div>
+      <div class="cell"><span class="idx">03</span><div><div class="name">花瓣</div><div class="dom">huaban.com</div></div></div>
+      <div class="cell"><span class="idx">04</span><div><div class="name">微信公众号</div><div class="dom">mp.weixin.qq.com</div></div></div>
+      <div class="cell"><span class="idx">05</span><div><div class="name">500px</div><div class="dom">500px.com</div></div></div>
+      <div class="cell"><span class="idx">06</span><div><div class="name">堆糖</div><div class="dom">duitang.com</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>为收集与整理而做的细节。</h2>
+      <p class="eyebrow"><b>03</b> 核心能力</p>
+    </div>
+    <div class="grid feats">
+      <div class="feat"><div class="fn">F/01</div><h3>悬停选图</h3><p>鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。</p></div>
+      <div class="feat"><div class="fn">F/02</div><h3>三种下载</h3><p>打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。</p></div>
+      <div class="feat"><div class="fn">F/03</div><h3>原图还原</h3><p>针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。</p></div>
+      <div class="feat"><div class="fn">F/04</div><h3>历史回看</h3><p>每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。</p></div>
+      <div class="feat"><div class="fn">F/05</div><h3>多标签联动</h3><p>同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。</p></div>
+      <div class="feat"><div class="fn">F/06</div><h3>本地缓存</h3><p>图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="shots">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>真实站点上的实际效果。</h2>
+      <p class="eyebrow"><b>04</b> 截图 · 悬停看原色</p>
+    </div>
+    <div class="shots">
+      <div class="shot wide"><img src="screenshots/pinterest.png" alt="Pinterest 批量选择"><div class="cap"><span>Pinterest</span><span>批量收集灵感图</span></div></div>
+      <div class="shot"><img src="screenshots/xiaohongshu.png" alt="小红书 选择"><div class="cap"><span>小红书</span><span>笔记瀑布流</span></div></div>
+      <div class="shot"><img src="screenshots/500px.png" alt="500px 选择"><div class="cap"><span>500px</span><span>摄影大图</span></div></div>
+      <div class="shot"><img src="screenshots/duitang.png" alt="堆糖 选择"><div class="cap"><span>堆糖</span><span>壁纸瀑布流</span></div></div>
+      <div class="shot"><img src="screenshots/download-dialog.png" alt="三种下载方式"><div class="cap"><span>下载</span><span>三种方式</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="flavors">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>两种用法，同一套能力。</h2>
+      <p class="eyebrow"><b>05</b> 怎么装</p>
+    </div>
+    <div class="flavors">
+      <div class="flavor">
+        <div class="k">推荐 / Chrome MV3</div>
+        <h3>浏览器扩展</h3>
+        <p>原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。</p>
+        <ul>
+          <li>侧边栏：站点 / 历史 / 设置</li>
+          <li>历史预览 + 一键重新下载</li>
+          <li>防盗链改写 + 本地缓存兜底</li>
+        </ul>
+        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载/extension" target="_blank" rel="noopener">扩展源码 →</a>
+      </div>
+      <div class="flavor">
+        <div class="k">免装扩展 / Tampermonkey</div>
+        <h3>油猴脚本</h3>
+        <p>不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。</p>
+        <ul>
+          <li>6 个站点，各自独立单文件</li>
+          <li>页面右下角常驻 Dock</li>
+          <li>选择状态跨页面持久保留</li>
+        </ul>
+        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载" target="_blank" rel="noopener">脚本目录 →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="sechead">
+      <h2>四步开始使用。</h2>
+      <p class="eyebrow"><b>06</b> 安装 · Chrome 扩展</p>
+    </div>
+    <div class="grid steps">
+      <div class="step"><div class="num">1</div><h3>下载仓库</h3><p>克隆或下载 ZIP 后解压到本地。</p></div>
+      <div class="step"><div class="num">2</div><h3>打开扩展页</h3><p>地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。</p></div>
+      <div class="step"><div class="num">3</div><h3>加载扩展</h3><p>点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。</p></div>
+      <div class="step"><div class="num">4</div><h3>开始拾图</h3><p>打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="endcta">
+  <div class="wrap">
+    <p class="eyebrow" style="color:var(--g3);justify-content:center;"><b style="color:#fff;">开源 · 免费 · MIT</b></p>
+    <h2 style="margin-top:18px;">在 GitHub 上获取</h2>
+    <p>源码、扩展、六个站点的油猴脚本都在同一个仓库。欢迎 Star、提 Issue、一起适配更多站点。</p>
+    <div class="cta">
+      <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">nevertoday/tampermonkey-scripts ↗</a>
+      <a class="btn" href="https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip">下载 ZIP</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>图拾 DOCK — 图片拾取工作台</span>
+    <span><a href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">github.com/nevertoday/tampermonkey-scripts</a></span>
+    <span>MIT License</span>
+  </div>
+</footer>
+
+</body>
+</html>

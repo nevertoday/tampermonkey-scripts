@@ -56,6 +56,17 @@ const context = {
   }
 };
 
+// background.js does `importScripts('lib/image-cache.js')`; load it into the same
+// context. The cache lib degrades to no-ops here because `indexedDB` is undefined,
+// so getBlob/has return null/false and download behavior is unchanged.
+context.importScripts = (relPath) => {
+  vm.runInContext(
+    fs.readFileSync(path.join(__dirname, '../extension', relPath), 'utf8'),
+    context,
+    { filename: relPath }
+  );
+};
+
 vm.createContext(context);
 vm.runInContext(
   fs.readFileSync(path.join(__dirname, '../extension/background.js'), 'utf8'),
