@@ -83,7 +83,7 @@ assert.match(sidepanel, /function resetShortcuts/, 'side panel should reset shor
 assert.match(sidepanelCss, /\.shortcut-grid/, 'custom shortcut controls should be styled');
 assert.match(sidepanelCss, /\.shortcut-key/, 'shortcut key inputs should be styled');
 assert.match(sidepanelHtml, /data-tab="history"[^>]*>历史</, 'side panel should expose a history tab');
-assert.doesNotMatch(sidepanelHtml, /<h1>图拾 Dock<\/h1>/, 'side panel should not repeat the extension name in a visible top header');
+assert.doesNotMatch(sidepanelHtml, /<h1>拾图<\/h1>/, 'side panel should not repeat the extension name in a visible top header');
 assert.doesNotMatch(sidepanelHtml, /id="current-site"/, 'unsupported-page copy should not sit in a redundant top header');
 assert.doesNotMatch(sidepanelHtml, /data-tab="donate"/, 'donation should not be a top-level tab');
 assert.match(sidepanelHtml, /id="tab-settings"[\s\S]*打赏作者/, 'donation section should live inside settings tab');

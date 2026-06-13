@@ -1,23 +1,33 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>图拾 Dock — 在图片网站上批量拾取、下载原图</title>
-<meta name="description" content="图拾 Dock：在小红书、Pinterest、花瓣、微信公众号、500px、堆糖上悬停选图，一键打包下载原图。Chrome 扩展 + 油猴脚本，纯本地、不上传。">
+<title>拾图 — 在图片网站上批量拾取、下载原图</title>
+<meta name="description" content="拾图：在小红书、Pinterest、花瓣、微信公众号、500px、堆糖上悬停选图，一键打包下载原图。Chrome 扩展 + 油猴脚本，纯本地、不上传。">
+<script>
+  // Apply saved theme before paint to avoid a flash.
+  (function () {
+    try {
+      var t = localStorage.getItem('shitu-theme');
+      if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
 <style>
   :root{
-    --ink:#000;
-    --paper:#fff;
-    --g1:#f5f5f5;
-    --g2:#e4e4e4;
-    --g3:#bdbdbd;
-    --g4:#8a8a8a;
-    --g5:#555;
+    --ink:#000; --paper:#fff;
+    --g1:#f5f5f5; --g2:#e4e4e4; --g3:#bdbdbd; --g4:#8a8a8a; --g5:#555;
     --line:#000;
     --maxw:1180px;
     --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  }
+  html[data-theme="dark"]{
+    --ink:#fff; --paper:#0a0a0a;
+    --g1:#161616; --g2:#2a2a2a; --g3:#454545; --g4:#777; --g5:#a6a6a6;
+    --line:#fff;
   }
   *{box-sizing:border-box;margin:0;padding:0;border-radius:0!important;}
   html{scroll-behavior:smooth;}
@@ -28,74 +38,55 @@
     line-height:1.5;
     -webkit-font-smoothing:antialiased;
     font-size:16px;
+    transition:background-color .2s ease,color .2s ease;
   }
   a{color:inherit;text-decoration:none;}
   img{display:block;max-width:100%;}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px;}
-  .mono{font-family:var(--mono);}
-  .eyebrow{
-    font-family:var(--mono);
-    font-size:12px;
-    letter-spacing:.18em;
-    text-transform:uppercase;
-    color:var(--g5);
-    display:inline-flex;
-    gap:10px;
-    align-items:center;
-  }
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--g5);display:inline-flex;gap:10px;align-items:center;}
   .eyebrow b{color:var(--ink);font-weight:700;}
 
-  /* ---- nav ---- */
-  nav{
-    position:sticky;top:0;z-index:50;
-    background:var(--paper);
-    border-bottom:2px solid var(--line);
-  }
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:2px solid var(--line);transition:background-color .2s ease,border-color .2s ease;}
   nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;}
-  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.12em;font-size:15px;display:flex;align-items:center;gap:10px;}
-  .brand .sq{width:14px;height:14px;background:var(--ink);display:inline-block;}
-  .navlinks{display:flex;gap:0;font-family:var(--mono);font-size:13px;}
-  .navlinks a{padding:8px 14px;border-left:1px solid var(--g2);color:var(--g5);}
-  .navlinks a:hover{background:var(--ink);color:var(--paper);}
+  .brand{font-family:var(--mono);font-weight:700;letter-spacing:.16em;font-size:15px;display:flex;align-items:center;gap:10px;}
+  .brand .sq{width:14px;height:14px;background:var(--ink);display:inline-block;transition:background-color .2s ease;}
+  .navlinks{display:flex;align-items:stretch;height:60px;font-family:var(--mono);font-size:13px;}
+  .navlinks a,.navlinks button{
+    display:inline-flex;align-items:center;height:60px;padding:0 14px;
+    border:none;border-left:1px solid var(--g2);
+    background:transparent;color:var(--g5);font:inherit;cursor:pointer;
+    transition:background-color .12s ease,color .12s ease;
+  }
   .navlinks a.gh{color:var(--ink);font-weight:700;}
+  .navlinks a:hover,.navlinks button:hover,
+  .navlinks a:focus-visible,.navlinks button:focus-visible{background:var(--ink);color:var(--paper);outline:none;}
+  .navtoggle{min-width:46px;justify-content:center;letter-spacing:.06em;}
 
-  /* ---- hero ---- */
+  /* hero */
   header.hero{border-bottom:2px solid var(--line);}
-  .hero .wrap{padding-top:72px;padding-bottom:0;}
-  .hero h1{
-    font-size:clamp(56px,12vw,160px);
-    line-height:.92;
-    letter-spacing:-.03em;
-    font-weight:800;
-  }
+  .hero .wrap{padding-top:72px;}
+  .hero h1{font-size:clamp(56px,12vw,160px);line-height:.92;letter-spacing:-.03em;font-weight:800;}
   .hero h1 small{display:block;font-family:var(--mono);font-size:clamp(14px,2.4vw,24px);font-weight:600;letter-spacing:.32em;color:var(--g4);margin-bottom:18px;}
-  .hero .tag{font-size:clamp(18px,2.6vw,30px);font-weight:600;max-width:780px;margin-top:28px;}
-  .hero .sub{color:var(--g5);max-width:620px;margin-top:16px;font-size:16px;}
+  .hero .tag{font-size:clamp(18px,2.6vw,30px);font-weight:600;max-width:820px;margin-top:28px;}
+  .hero .sub{color:var(--g5);max-width:660px;margin-top:16px;}
   .cta{display:flex;flex-wrap:wrap;gap:0;margin:40px 0 64px;border:2px solid var(--line);width:max-content;max-width:100%;}
-  .btn{
-    font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.04em;
-    padding:16px 26px;display:inline-flex;align-items:center;gap:10px;cursor:pointer;
-    background:var(--paper);color:var(--ink);border:none;
-  }
+  .btn{font-family:var(--mono);font-size:14px;font-weight:700;letter-spacing:.04em;padding:16px 26px;display:inline-flex;align-items:center;gap:10px;cursor:pointer;background:var(--paper);color:var(--ink);border:none;transition:background-color .12s ease,color .12s ease;}
   .btn + .btn{border-left:2px solid var(--line);}
   .btn.solid{background:var(--ink);color:var(--paper);}
   .btn:hover{background:var(--ink);color:var(--paper);}
   .btn.solid:hover{background:var(--paper);color:var(--ink);}
 
-  /* ---- stat strip ---- */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:2px solid var(--line);}
   .stat{padding:28px 24px;border-left:1px solid var(--g2);}
   .stat:first-child{border-left:none;}
   .stat .n{font-size:clamp(34px,5vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1;}
   .stat .l{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--g5);margin-top:12px;}
 
-  /* ---- section ---- */
   section{border-bottom:2px solid var(--line);}
   .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding:64px 0 36px;flex-wrap:wrap;}
-  .sechead h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.05;max-width:18ch;}
-  .sechead p{color:var(--g5);max-width:42ch;}
+  .sechead h2{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.05;max-width:20ch;}
 
-  /* problem two-col */
   .twocol{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--g2);}
   .twocol > div{padding:40px 0;}
   .twocol > div:last-child{border-left:1px solid var(--g2);padding-left:40px;}
@@ -105,33 +96,29 @@
   .twocol li:first-child{border-top:none;}
   .twocol li .ix{font-family:var(--mono);color:var(--g3);font-size:13px;min-width:24px;}
 
-  /* site grid */
-  .grid{display:grid;gap:0;border-left:1px solid var(--g2);border-top:1px solid var(--g2);}
+  .grid{display:grid;border-left:1px solid var(--g2);border-top:1px solid var(--g2);}
   .sites{grid-template-columns:repeat(3,1fr);margin-bottom:64px;}
-  .cell{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:28px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;transition:background .12s,color .12s;}
+  .cell{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:28px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between;transition:background-color .12s ease,color .12s ease;}
   .cell:hover{background:var(--ink);color:var(--paper);}
   .cell .idx{font-family:var(--mono);font-size:12px;color:var(--g4);letter-spacing:.1em;}
-  .cell:hover .idx{color:var(--g3);}
+  .cell:hover .idx,.cell:hover .dom{color:var(--g3);}
   .cell .name{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:8px;}
   .cell .dom{font-family:var(--mono);font-size:13px;color:var(--g5);margin-top:6px;}
-  .cell:hover .dom{color:var(--g3);}
 
-  /* feature grid */
   .feats{grid-template-columns:repeat(3,1fr);margin-bottom:64px;}
   .feat{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:30px 28px;}
   .feat .fn{font-family:var(--mono);font-size:12px;color:var(--g3);letter-spacing:.12em;}
   .feat h3{font-size:20px;font-weight:800;margin:14px 0 10px;letter-spacing:-.01em;}
   .feat p{color:var(--g5);font-size:15px;}
 
-  /* shots */
   .shots{margin-bottom:64px;display:grid;grid-template-columns:repeat(2,1fr);gap:24px;}
   .shot{border:2px solid var(--line);background:var(--g1);}
   .shot img{width:100%;filter:grayscale(100%) contrast(1.04);transition:filter .2s;}
-  .shot:hover img{filter:grayscale(0%);}
+  html[data-theme="dark"] .shot img{filter:grayscale(100%) contrast(1.04) invert(0);opacity:.92;}
+  .shot:hover img{filter:grayscale(0%);opacity:1;}
   .shot .cap{border-top:2px solid var(--line);padding:12px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--g5);display:flex;justify-content:space-between;}
   .shot.wide{grid-column:1 / -1;}
 
-  /* flavors */
   .flavors{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--g2);margin-bottom:64px;}
   .flavor{padding:40px;border-right:1px solid var(--g2);}
   .flavor:last-child{border-right:none;}
@@ -140,10 +127,9 @@
   .flavor p{color:var(--g5);margin-bottom:22px;}
   .flavor ul{list-style:none;margin-bottom:26px;}
   .flavor li{padding:10px 0;border-top:1px solid var(--g2);font-size:15px;}
-  .flavor .linkbtn{font-family:var(--mono);font-size:13px;font-weight:700;border:2px solid var(--line);padding:12px 18px;display:inline-flex;gap:10px;align-items:center;}
+  .flavor .linkbtn{font-family:var(--mono);font-size:13px;font-weight:700;border:2px solid var(--line);padding:12px 18px;display:inline-flex;gap:10px;align-items:center;transition:background-color .12s ease,color .12s ease;}
   .flavor .linkbtn:hover{background:var(--ink);color:var(--paper);}
 
-  /* install steps */
   .steps{grid-template-columns:repeat(4,1fr);margin-bottom:64px;}
   .step{border-right:1px solid var(--g2);border-bottom:1px solid var(--g2);padding:28px;}
   .step .num{font-size:40px;font-weight:800;letter-spacing:-.02em;}
@@ -151,21 +137,18 @@
   .step p{color:var(--g5);font-size:14px;}
   .step code{font-family:var(--mono);font-size:13px;background:var(--g1);border:1px solid var(--g2);padding:1px 6px;}
 
-  /* big cta */
-  .endcta{background:var(--ink);color:var(--paper);}
+  .endcta{background:var(--ink);color:var(--paper);transition:background-color .2s ease,color .2s ease;}
   .endcta .wrap{padding:80px 24px;text-align:center;}
   .endcta h2{font-size:clamp(32px,6vw,72px);font-weight:800;letter-spacing:-.03em;line-height:1;}
-  .endcta p{color:var(--g3);margin:20px auto 36px;max-width:50ch;}
-  .endcta .btn{border:2px solid var(--paper);}
-  .endcta .cta{border-color:var(--paper);margin:0 auto;}
+  .endcta p{color:var(--g3);margin:20px auto 36px;max-width:54ch;}
+  .endcta .cta{border:2px solid var(--paper);margin:0 auto;}
   .endcta .btn{background:var(--ink);color:var(--paper);}
   .endcta .btn.solid{background:var(--paper);color:var(--ink);}
   .endcta .btn:hover{background:var(--paper);color:var(--ink);}
   .endcta .btn.solid:hover{background:var(--ink);color:var(--paper);}
   .endcta .btn + .btn{border-left:2px solid var(--paper);}
 
-  /* footer */
-  footer{background:var(--paper);}
+  footer{background:var(--paper);transition:background-color .2s ease;}
   footer .wrap{padding:40px 24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--g5);}
   footer a{border-bottom:1px solid var(--ink);color:var(--ink);}
   footer a:hover{background:var(--ink);color:var(--paper);}
@@ -178,12 +161,11 @@
     .twocol,.flavors{grid-template-columns:1fr;}
     .twocol > div:last-child{border-left:none;border-top:1px solid var(--g2);padding-left:0;}
     .flavor{border-right:none;border-bottom:1px solid var(--g2);}
-    .navlinks .hidem{display:none;}
+    .navlinks a.navhide{display:none;}
   }
   @media(max-width:560px){
     .sites,.feats{grid-template-columns:1fr;}
     .shots{grid-template-columns:1fr;}
-    .navlinks a:not(.gh){display:none;}
   }
 </style>
 </head>
@@ -191,11 +173,13 @@
 
 <nav>
   <div class="wrap">
-    <a class="brand" href="#top"><span class="sq"></span>图拾 DOCK</a>
+    <a class="brand" href="#top"><span class="sq"></span>拾图</a>
     <div class="navlinks">
-      <a class="hidem" href="#sites">站点</a>
-      <a class="hidem" href="#features">能力</a>
-      <a class="hidem" href="#install">安装</a>
+      <a class="navhide" href="#sites" data-i18n="navSites">站点</a>
+      <a class="navhide" href="#features" data-i18n="navFeatures">能力</a>
+      <a class="navhide" href="#install" data-i18n="navInstall">安装</a>
+      <button class="navtoggle" id="langToggle" type="button" aria-label="Switch language">EN</button>
+      <button class="navtoggle" id="themeToggle" type="button" aria-label="Toggle dark mode">☾</button>
       <a class="gh" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </div>
@@ -203,20 +187,20 @@
 
 <header class="hero" id="top">
   <div class="wrap">
-    <h1><small>图片拾取工作台 / IMAGE PICKER</small>图拾 Dock</h1>
-    <p class="tag">把散落在网页里的好图，一张张拾起来。</p>
-    <p class="sub">在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。</p>
+    <h1><small data-i18n="heroKicker">图片拾取工作台 / IMAGE PICKER</small>拾图</h1>
+    <p class="tag" data-i18n="heroTag">把散落在网页里的好图，一张张拾起来。</p>
+    <p class="sub" data-i18n="heroSub">在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。</p>
     <div class="cta">
-      <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">在 GitHub 获取 →</a>
-      <a class="btn" href="#install">安装方法</a>
+      <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener" data-i18n="ctaGet">在 GitHub 获取 →</a>
+      <a class="btn" href="#install" data-i18n="ctaInstall">安装方法</a>
     </div>
   </div>
-  <div class="wrap" style="padding:0 24px;">
+  <div class="wrap">
     <div class="stats">
-      <div class="stat"><div class="n">6</div><div class="l">支持站点</div></div>
-      <div class="stat"><div class="n">3</div><div class="l">下载方式</div></div>
-      <div class="stat"><div class="n">0</div><div class="l">服务器上传</div></div>
-      <div class="stat"><div class="n">100%</div><div class="l">本地运行</div></div>
+      <div class="stat"><div class="n">6</div><div class="l" data-i18n="statSites">支持站点</div></div>
+      <div class="stat"><div class="n">3</div><div class="l" data-i18n="statModes">下载方式</div></div>
+      <div class="stat"><div class="n">0</div><div class="l" data-i18n="statUploads">服务器上传</div></div>
+      <div class="stat"><div class="n">100%</div><div class="l" data-i18n="statLocal">本地运行</div></div>
     </div>
   </div>
 </header>
@@ -224,28 +208,28 @@
 <section id="why">
   <div class="wrap">
     <div class="sechead">
-      <h2>图片网站擅长展示，却不擅长帮你整理。</h2>
-      <p class="eyebrow"><b>01</b> 它解决的问题</p>
+      <h2 data-i18n="whyH">图片网站擅长展示，却不擅长帮你整理。</h2>
+      <p class="eyebrow"><b>01</b> <span data-i18n="whyEyebrow">它解决的问题</span></p>
     </div>
     <div class="twocol">
       <div>
-        <h3>过去的麻烦</h3>
+        <h3 data-i18n="painH">过去的麻烦</h3>
         <ul>
-          <li><span class="ix">01</span>右键保存太慢，连续存几十张打断思路。</li>
-          <li><span class="ix">02</span>头像、图标、二维码混在一起，通用下载器误抓。</li>
-          <li><span class="ix">03</span>缩略图、懒加载、瀑布流，手动找原图很费劲。</li>
-          <li><span class="ix">04</span>不同站点脚本分散，开关与快捷键各不相同。</li>
-          <li><span class="ix">05</span>滚动几屏后，记不清自己刚刚选过哪些。</li>
+          <li><span class="ix">01</span><span data-i18n="pain1">右键保存太慢，连续存几十张打断思路。</span></li>
+          <li><span class="ix">02</span><span data-i18n="pain2">头像、图标、二维码混在一起，通用下载器误抓。</span></li>
+          <li><span class="ix">03</span><span data-i18n="pain3">缩略图、懒加载、瀑布流，手动找原图很费劲。</span></li>
+          <li><span class="ix">04</span><span data-i18n="pain4">不同站点脚本分散，开关与快捷键各不相同。</span></li>
+          <li><span class="ix">05</span><span data-i18n="pain5">滚动几屏后，记不清自己刚刚选过哪些。</span></li>
         </ul>
       </div>
       <div>
-        <h3>图拾的方式</h3>
+        <h3 data-i18n="wayH">拾图的方式</h3>
         <ul>
-          <li><span class="ix">→</span>每个站点单独适配，精准识别内容原图。</li>
-          <li><span class="ix">→</span>悬停出现「＋」，点一下选中，蓝/黑框持久标记。</li>
-          <li><span class="ix">→</span>自动把缩略图还原为最高画质原图链接。</li>
-          <li><span class="ix">→</span>统一的侧边栏：站点、历史、设置、前缀集中管理。</li>
-          <li><span class="ix">→</span>选择跨标签页、跨滚动持久保留，计数实时联动。</li>
+          <li><span class="ix">→</span><span data-i18n="way1">每个站点单独适配，精准识别内容原图。</span></li>
+          <li><span class="ix">→</span><span data-i18n="way2">悬停出现「＋」，点一下选中，持久标记。</span></li>
+          <li><span class="ix">→</span><span data-i18n="way3">自动把缩略图还原为最高画质原图链接。</span></li>
+          <li><span class="ix">→</span><span data-i18n="way4">统一侧边栏：站点、历史、设置、前缀集中管理。</span></li>
+          <li><span class="ix">→</span><span data-i18n="way5">选择跨标签页、跨滚动持久保留，计数实时联动。</span></li>
         </ul>
       </div>
     </div>
@@ -255,16 +239,16 @@
 <section id="sites">
   <div class="wrap">
     <div class="sechead">
-      <h2>六个主流平台，一套操作。</h2>
-      <p class="eyebrow"><b>02</b> 支持站点</p>
+      <h2 data-i18n="sitesH">六个主流平台，一套操作。</h2>
+      <p class="eyebrow"><b>02</b> <span data-i18n="sitesEyebrow">支持站点</span></p>
     </div>
     <div class="grid sites">
-      <div class="cell"><span class="idx">01</span><div><div class="name">小红书</div><div class="dom">xiaohongshu.com</div></div></div>
+      <div class="cell"><span class="idx">01</span><div><div class="name" data-i18n="siteXhs">小红书</div><div class="dom">xiaohongshu.com</div></div></div>
       <div class="cell"><span class="idx">02</span><div><div class="name">Pinterest</div><div class="dom">pinterest.com</div></div></div>
-      <div class="cell"><span class="idx">03</span><div><div class="name">花瓣</div><div class="dom">huaban.com</div></div></div>
-      <div class="cell"><span class="idx">04</span><div><div class="name">微信公众号</div><div class="dom">mp.weixin.qq.com</div></div></div>
+      <div class="cell"><span class="idx">03</span><div><div class="name" data-i18n="siteHuaban">花瓣</div><div class="dom">huaban.com</div></div></div>
+      <div class="cell"><span class="idx">04</span><div><div class="name" data-i18n="siteWechat">微信公众号</div><div class="dom">mp.weixin.qq.com</div></div></div>
       <div class="cell"><span class="idx">05</span><div><div class="name">500px</div><div class="dom">500px.com</div></div></div>
-      <div class="cell"><span class="idx">06</span><div><div class="name">堆糖</div><div class="dom">duitang.com</div></div></div>
+      <div class="cell"><span class="idx">06</span><div><div class="name" data-i18n="siteDuitang">堆糖</div><div class="dom">duitang.com</div></div></div>
     </div>
   </div>
 </section>
@@ -272,16 +256,16 @@
 <section id="features">
   <div class="wrap">
     <div class="sechead">
-      <h2>为收集与整理而做的细节。</h2>
-      <p class="eyebrow"><b>03</b> 核心能力</p>
+      <h2 data-i18n="featH">为收集与整理而做的细节。</h2>
+      <p class="eyebrow"><b>03</b> <span data-i18n="featEyebrow">核心能力</span></p>
     </div>
     <div class="grid feats">
-      <div class="feat"><div class="fn">F/01</div><h3>悬停选图</h3><p>鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。</p></div>
-      <div class="feat"><div class="fn">F/02</div><h3>三种下载</h3><p>打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。</p></div>
-      <div class="feat"><div class="fn">F/03</div><h3>原图还原</h3><p>针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。</p></div>
-      <div class="feat"><div class="fn">F/04</div><h3>历史回看</h3><p>每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。</p></div>
-      <div class="feat"><div class="fn">F/05</div><h3>多标签联动</h3><p>同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。</p></div>
-      <div class="feat"><div class="fn">F/06</div><h3>本地缓存</h3><p>图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。</p></div>
+      <div class="feat"><div class="fn">F/01</div><h3 data-i18n="f1h">悬停选图</h3><p data-i18n="f1p">鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。</p></div>
+      <div class="feat"><div class="fn">F/02</div><h3 data-i18n="f2h">三种下载</h3><p data-i18n="f2p">打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。</p></div>
+      <div class="feat"><div class="fn">F/03</div><h3 data-i18n="f3h">原图还原</h3><p data-i18n="f3p">针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。</p></div>
+      <div class="feat"><div class="fn">F/04</div><h3 data-i18n="f4h">历史回看</h3><p data-i18n="f4p">每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。</p></div>
+      <div class="feat"><div class="fn">F/05</div><h3 data-i18n="f5h">多标签联动</h3><p data-i18n="f5p">同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。</p></div>
+      <div class="feat"><div class="fn">F/06</div><h3 data-i18n="f6h">本地缓存</h3><p data-i18n="f6p">图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。</p></div>
     </div>
   </div>
 </section>
@@ -289,15 +273,15 @@
 <section id="shots">
   <div class="wrap">
     <div class="sechead">
-      <h2>真实站点上的实际效果。</h2>
-      <p class="eyebrow"><b>04</b> 截图 · 悬停看原色</p>
+      <h2 data-i18n="shotsH">真实站点上的实际效果。</h2>
+      <p class="eyebrow"><b>04</b> <span data-i18n="shotsEyebrow">截图 · 悬停看原色</span></p>
     </div>
     <div class="shots">
-      <div class="shot wide"><img src="screenshots/pinterest.png" alt="Pinterest 批量选择"><div class="cap"><span>Pinterest</span><span>批量收集灵感图</span></div></div>
-      <div class="shot"><img src="screenshots/xiaohongshu.png" alt="小红书 选择"><div class="cap"><span>小红书</span><span>笔记瀑布流</span></div></div>
-      <div class="shot"><img src="screenshots/500px.png" alt="500px 选择"><div class="cap"><span>500px</span><span>摄影大图</span></div></div>
-      <div class="shot"><img src="screenshots/duitang.png" alt="堆糖 选择"><div class="cap"><span>堆糖</span><span>壁纸瀑布流</span></div></div>
-      <div class="shot"><img src="screenshots/download-dialog.png" alt="三种下载方式"><div class="cap"><span>下载</span><span>三种方式</span></div></div>
+      <div class="shot wide"><img src="screenshots/pinterest.png" alt="Pinterest"><div class="cap"><span>Pinterest</span><span data-i18n="capPinterest">批量收集灵感图</span></div></div>
+      <div class="shot"><img src="screenshots/xiaohongshu.png" alt="Xiaohongshu"><div class="cap"><span data-i18n="siteXhs">小红书</span><span data-i18n="capXhs">笔记瀑布流</span></div></div>
+      <div class="shot"><img src="screenshots/500px.png" alt="500px"><div class="cap"><span>500px</span><span data-i18n="capPx">摄影大图</span></div></div>
+      <div class="shot"><img src="screenshots/duitang.png" alt="Duitang"><div class="cap"><span data-i18n="siteDuitang">堆糖</span><span data-i18n="capDt">壁纸瀑布流</span></div></div>
+      <div class="shot"><img src="screenshots/download-dialog.png" alt="Download modes"><div class="cap"><span data-i18n="capDlK">下载</span><span data-i18n="capDl">三种方式</span></div></div>
     </div>
   </div>
 </section>
@@ -305,31 +289,31 @@
 <section id="flavors">
   <div class="wrap">
     <div class="sechead">
-      <h2>两种用法，同一套能力。</h2>
-      <p class="eyebrow"><b>05</b> 怎么装</p>
+      <h2 data-i18n="flavH">两种用法，同一套能力。</h2>
+      <p class="eyebrow"><b>05</b> <span data-i18n="flavEyebrow">怎么装</span></p>
     </div>
     <div class="flavors">
       <div class="flavor">
-        <div class="k">推荐 / Chrome MV3</div>
-        <h3>浏览器扩展</h3>
-        <p>原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。</p>
+        <div class="k" data-i18n="flav1k">推荐 / Chrome MV3</div>
+        <h3 data-i18n="flav1h">浏览器扩展</h3>
+        <p data-i18n="flav1p">原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。</p>
         <ul>
-          <li>侧边栏：站点 / 历史 / 设置</li>
-          <li>历史预览 + 一键重新下载</li>
-          <li>防盗链改写 + 本地缓存兜底</li>
+          <li data-i18n="flav1l1">侧边栏：站点 / 历史 / 设置</li>
+          <li data-i18n="flav1l2">历史预览 + 一键重新下载</li>
+          <li data-i18n="flav1l3">防盗链改写 + 本地缓存兜底</li>
         </ul>
-        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载/extension" target="_blank" rel="noopener">扩展源码 →</a>
+        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载/extension" target="_blank" rel="noopener" data-i18n="flav1link">扩展源码 →</a>
       </div>
       <div class="flavor">
-        <div class="k">免装扩展 / Tampermonkey</div>
-        <h3>油猴脚本</h3>
-        <p>不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。</p>
+        <div class="k" data-i18n="flav2k">免装扩展 / Tampermonkey</div>
+        <h3 data-i18n="flav2h">油猴脚本</h3>
+        <p data-i18n="flav2p">不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。</p>
         <ul>
-          <li>6 个站点，各自独立单文件</li>
-          <li>页面右下角常驻 Dock</li>
-          <li>选择状态跨页面持久保留</li>
+          <li data-i18n="flav2l1">6 个站点，各自独立单文件</li>
+          <li data-i18n="flav2l2">页面右下角常驻 Dock</li>
+          <li data-i18n="flav2l3">选择状态跨页面持久保留</li>
         </ul>
-        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载" target="_blank" rel="noopener">脚本目录 →</a>
+        <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载" target="_blank" rel="noopener" data-i18n="flav2link">脚本目录 →</a>
       </div>
     </div>
   </div>
@@ -338,37 +322,177 @@
 <section id="install">
   <div class="wrap">
     <div class="sechead">
-      <h2>四步开始使用。</h2>
-      <p class="eyebrow"><b>06</b> 安装 · Chrome 扩展</p>
+      <h2 data-i18n="instH">四步开始使用。</h2>
+      <p class="eyebrow"><b>06</b> <span data-i18n="instEyebrow">安装 · Chrome 扩展</span></p>
     </div>
     <div class="grid steps">
-      <div class="step"><div class="num">1</div><h3>下载仓库</h3><p>克隆或下载 ZIP 后解压到本地。</p></div>
-      <div class="step"><div class="num">2</div><h3>打开扩展页</h3><p>地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。</p></div>
-      <div class="step"><div class="num">3</div><h3>加载扩展</h3><p>点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。</p></div>
-      <div class="step"><div class="num">4</div><h3>开始拾图</h3><p>打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。</p></div>
+      <div class="step"><div class="num">1</div><h3 data-i18n="step1h">下载仓库</h3><p data-i18n="step1p">克隆或下载 ZIP 后解压到本地。</p></div>
+      <div class="step"><div class="num">2</div><h3 data-i18n="step2h">打开扩展页</h3><p data-i18n-html="step2p">地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。</p></div>
+      <div class="step"><div class="num">3</div><h3 data-i18n="step3h">加载扩展</h3><p data-i18n-html="step3p">点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。</p></div>
+      <div class="step"><div class="num">4</div><h3 data-i18n="step4h">开始拾图</h3><p data-i18n="step4p">打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。</p></div>
     </div>
   </div>
 </section>
 
 <section class="endcta">
   <div class="wrap">
-    <p class="eyebrow" style="color:var(--g3);justify-content:center;"><b style="color:#fff;">开源 · 免费 · MIT</b></p>
-    <h2 style="margin-top:18px;">在 GitHub 上获取</h2>
-    <p>源码、扩展、六个站点的油猴脚本都在同一个仓库。欢迎 Star、提 Issue、一起适配更多站点。</p>
+    <p class="eyebrow" style="justify-content:center;"><b data-i18n="endKicker">开源 · 免费 · MIT</b></p>
+    <h2 style="margin-top:18px;" data-i18n="endH">在 GitHub 上获取</h2>
+    <p data-i18n="endP">源码、扩展、六个站点的油猴脚本都在同一个仓库。欢迎 Star、提 Issue、一起适配更多站点。</p>
     <div class="cta">
       <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">nevertoday/tampermonkey-scripts ↗</a>
-      <a class="btn" href="https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip">下载 ZIP</a>
+      <a class="btn" href="https://github.com/nevertoday/tampermonkey-scripts/archive/refs/heads/main.zip" data-i18n="endZip">下载 ZIP</a>
     </div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <span>图拾 DOCK — 图片拾取工作台</span>
+    <span data-i18n="footName">拾图 — 图片拾取工作台</span>
     <span><a href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener">github.com/nevertoday/tampermonkey-scripts</a></span>
     <span>MIT License</span>
   </div>
 </footer>
 
+<script>
+  var I18N = {
+    zh: {
+      title:'拾图 — 在图片网站上批量拾取、下载原图',
+      navSites:'站点', navFeatures:'能力', navInstall:'安装',
+      heroKicker:'图片拾取工作台 / IMAGE PICKER',
+      heroTag:'把散落在网页里的好图，一张张拾起来。',
+      heroSub:'在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。',
+      ctaGet:'在 GitHub 获取 →', ctaInstall:'安装方法',
+      statSites:'支持站点', statModes:'下载方式', statUploads:'服务器上传', statLocal:'本地运行',
+      whyH:'图片网站擅长展示，却不擅长帮你整理。', whyEyebrow:'它解决的问题',
+      painH:'过去的麻烦',
+      pain1:'右键保存太慢，连续存几十张打断思路。',
+      pain2:'头像、图标、二维码混在一起，通用下载器误抓。',
+      pain3:'缩略图、懒加载、瀑布流，手动找原图很费劲。',
+      pain4:'不同站点脚本分散，开关与快捷键各不相同。',
+      pain5:'滚动几屏后，记不清自己刚刚选过哪些。',
+      wayH:'拾图的方式',
+      way1:'每个站点单独适配，精准识别内容原图。',
+      way2:'悬停出现「＋」，点一下选中，持久标记。',
+      way3:'自动把缩略图还原为最高画质原图链接。',
+      way4:'统一侧边栏：站点、历史、设置、前缀集中管理。',
+      way5:'选择跨标签页、跨滚动持久保留，计数实时联动。',
+      sitesH:'六个主流平台，一套操作。', sitesEyebrow:'支持站点',
+      siteXhs:'小红书', siteHuaban:'花瓣', siteWechat:'微信公众号', siteDuitang:'堆糖',
+      featH:'为收集与整理而做的细节。', featEyebrow:'核心能力',
+      f1h:'悬停选图', f1p:'鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。',
+      f2h:'三种下载', f2p:'打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。',
+      f3h:'原图还原', f3p:'针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。',
+      f4h:'历史回看', f4p:'每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。',
+      f5h:'多标签联动', f5p:'同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。',
+      f6h:'本地缓存', f6p:'图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。',
+      shotsH:'真实站点上的实际效果。', shotsEyebrow:'截图 · 悬停看原色',
+      capPinterest:'批量收集灵感图', capXhs:'笔记瀑布流', capPx:'摄影大图', capDt:'壁纸瀑布流', capDlK:'下载', capDl:'三种方式',
+      flavH:'两种用法，同一套能力。', flavEyebrow:'怎么装',
+      flav1k:'推荐 / Chrome MV3', flav1h:'浏览器扩展',
+      flav1p:'原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。',
+      flav1l1:'侧边栏：站点 / 历史 / 设置', flav1l2:'历史预览 + 一键重新下载', flav1l3:'防盗链改写 + 本地缓存兜底', flav1link:'扩展源码 →',
+      flav2k:'免装扩展 / Tampermonkey', flav2h:'油猴脚本',
+      flav2p:'不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。',
+      flav2l1:'6 个站点，各自独立单文件', flav2l2:'页面右下角常驻 Dock', flav2l3:'选择状态跨页面持久保留', flav2link:'脚本目录 →',
+      instH:'四步开始使用。', instEyebrow:'安装 · Chrome 扩展',
+      step1h:'下载仓库', step1p:'克隆或下载 ZIP 后解压到本地。',
+      step2h:'打开扩展页', step2p:'地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。',
+      step3h:'加载扩展', step3p:'点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。',
+      step4h:'开始拾图', step4p:'打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。',
+      endKicker:'开源 · 免费 · MIT', endH:'在 GitHub 上获取',
+      endP:'源码、扩展、六个站点的油猴脚本都在同一个仓库。欢迎 Star、提 Issue、一起适配更多站点。',
+      endZip:'下载 ZIP', footName:'拾图 — 图片拾取工作台'
+    },
+    en: {
+      title:'拾图 Shitu — Pick & batch-download original images on image sites',
+      navSites:'Sites', navFeatures:'Features', navInstall:'Install',
+      heroKicker:'IMAGE PICKER WORKBENCH',
+      heroTag:'Pick up the good images scattered across the web, one by one.',
+      heroSub:'Hover to select and batch-download original images on image sites. As light as picking files in a file manager — everything stays on your machine, nothing is uploaded.',
+      ctaGet:'Get it on GitHub →', ctaInstall:'How to install',
+      statSites:'Supported sites', statModes:'Download modes', statUploads:'Server uploads', statLocal:'Local-only',
+      whyH:'Image sites are great at showing, not at helping you organize.', whyEyebrow:'The problem it solves',
+      painH:'The old hassle',
+      pain1:'Right-click-saving is slow; saving dozens in a row breaks your flow.',
+      pain2:'Avatars, icons and QR codes mix in — generic downloaders grab the wrong ones.',
+      pain3:'Thumbnails, lazy loading and masonry make finding the original a chore.',
+      pain4:'Per-site scripts are scattered, with different toggles and shortcuts.',
+      pain5:'After a few scrolls you forget which images you already picked.',
+      wayH:'The way 拾图 works',
+      way1:'Adapted per site, accurately spotting the real content image.',
+      way2:'Hover for a “＋”, click to select, with a persistent mark.',
+      way3:'Automatically restores thumbnails to the highest-quality original URL.',
+      way4:'One side panel: sites, history, settings and prefixes in one place.',
+      way5:'Selection persists across tabs and scrolling, with a live synced count.',
+      sitesH:'Six major platforms, one workflow.', sitesEyebrow:'Supported sites',
+      siteXhs:'Xiaohongshu', siteHuaban:'Huaban', siteWechat:'WeChat Articles', siteDuitang:'Duitang',
+      featH:'Details built for collecting and organizing.', featEyebrow:'Core features',
+      f1h:'Hover to pick', f1p:'The “＋” appears only when you hover an image; click to select, or use a keyboard shortcut for the image under the cursor.',
+      f2h:'Three download modes', f2p:'Pack a ZIP, save originals one by one, or export a link list for IDM / aria2.',
+      f3h:'Original restore', f3p:'Per-site stripping of thumbnail markers and signed params to get the highest quality.',
+      f4h:'History', f4p:'Every download/copy is logged — filter by site, scroll-preview thumbnails, re-download in one click.',
+      f5h:'Multi-tab sync', f5p:'Tabs of the same site share one selection with a live synced count.',
+      f6h:'Local cache', f6p:'Image bytes are kept locally, so previews and re-downloads work even after links expire — nothing is uploaded.',
+      shotsH:'Real results on real sites.', shotsEyebrow:'Screenshots · hover for color',
+      capPinterest:'Collect inspiration in bulk', capXhs:'Note masonry', capPx:'Photography', capDt:'Wallpaper masonry', capDlK:'Download', capDl:'Three modes',
+      flavH:'Two ways to use it, same capabilities.', flavEyebrow:'How to get it',
+      flav1k:'Recommended / Chrome MV3', flav1h:'Browser extension',
+      flav1p:'A native side panel keeps site switching, history, settings and downloads in one place, off your page.',
+      flav1l1:'Side panel: Sites / History / Settings', flav1l2:'History preview + one-click re-download', flav1l3:'Referer rewrite + local-cache fallback', flav1link:'Extension source →',
+      flav2k:'No extension / Tampermonkey', flav2h:'Userscripts',
+      flav2p:'Don’t want an extension? One standalone userscript per site, single-file, same capabilities.',
+      flav2l1:'6 sites, each a standalone file', flav2l2:'A Dock pinned at the bottom-right', flav2l3:'Selection persists across pages', flav2link:'Scripts folder →',
+      instH:'Start in four steps.', instEyebrow:'Install · Chrome extension',
+      step1h:'Download the repo', step1p:'Clone or download the ZIP and unzip it locally.',
+      step2h:'Open extensions', step2p:'Go to <code>chrome://extensions</code> and turn on “Developer mode” (top-right).',
+      step3h:'Load unpacked', step3p:'Click “Load unpacked” and choose the <code>图片下载/extension</code> folder.',
+      step4h:'Start picking', step4p:'Open a supported site, click the toolbar icon to open the side panel, and hover images to select.',
+      endKicker:'Open source · Free · MIT', endH:'Get it on GitHub',
+      endP:'Source, the extension, and userscripts for six sites all live in one repo. Stars, issues and new-site PRs welcome.',
+      endZip:'Download ZIP', footName:'拾图 — image picker workbench'
+    }
+  };
+
+  var html = document.documentElement;
+  var themeToggle = document.getElementById('themeToggle');
+  var langToggle = document.getElementById('langToggle');
+
+  function applyTheme(t){
+    html.setAttribute('data-theme', t);
+    themeToggle.textContent = t === 'dark' ? '☀' : '☾';
+    themeToggle.setAttribute('aria-label', t === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+    try { localStorage.setItem('shitu-theme', t); } catch(e){}
+  }
+  function applyLang(lang){
+    var dict = I18N[lang] || I18N.zh;
+    html.setAttribute('lang', lang === 'en' ? 'en' : 'zh-CN');
+    document.querySelectorAll('[data-i18n]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n')];
+      if (v != null) el.textContent = v;
+    });
+    document.querySelectorAll('[data-i18n-html]').forEach(function(el){
+      var v = dict[el.getAttribute('data-i18n-html')];
+      if (v != null) el.innerHTML = v;
+    });
+    if (dict.title) document.title = dict.title;
+    langToggle.textContent = lang === 'en' ? '中文' : 'EN';
+    try { localStorage.setItem('shitu-lang', lang); } catch(e){}
+  }
+
+  themeToggle.addEventListener('click', function(){
+    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+  langToggle.addEventListener('click', function(){
+    applyLang(html.getAttribute('lang') === 'en' ? 'zh' : 'en');
+  });
+
+  // init
+  applyTheme(html.getAttribute('data-theme') || 'light');
+  var savedLang = null;
+  try { savedLang = localStorage.getItem('shitu-lang'); } catch(e){}
+  if (!savedLang) savedLang = (navigator.language || '').toLowerCase().indexOf('zh') === 0 ? 'zh' : 'en';
+  applyLang(savedLang);
+</script>
 </body>
 </html>

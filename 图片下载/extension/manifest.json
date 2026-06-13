@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "图拾 Dock",
-  "short_name": "图拾",
+  "name": "拾图",
+  "short_name": "拾图",
   "version": "0.1.0",
-  "description": "在小红书、Pinterest、微信公众号、500px、堆糖、花瓣中拾取图片，并通过 Dock 侧边栏批量下载。",
+  "description": "在小红书、Pinterest、花瓣、微信公众号、500px、堆糖中拾取图片，并通过侧边栏批量下载。",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",
@@ -50,7 +50,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "图拾 Dock",
+    "default_title": "拾图",
     "default_icon": {
       "16": "assets/icon-16.png",
       "32": "assets/icon-32.png",
