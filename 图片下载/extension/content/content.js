@@ -428,6 +428,7 @@
       done: 0,
       total: state.selected.size
     };
+    announceDownloadPhase(state.downloadProgress.phase, mode);
     updateMiniPanel();
     let response;
     try {
@@ -459,14 +460,28 @@
   function applyDownloadProgress(payload) {
     const total = Math.max(0, Number(payload.total) || 0);
     const done = Math.min(total, Math.max(0, Number(payload.done) || 0));
-    state.downloadProgress = {
-      mode: payload.mode || state.downloadProgress?.mode || state.settings.defaultDownloadMode,
-      phase: normalizeDownloadPhase(payload.phase),
-      done,
-      total
-    };
+    const prevPhase = state.downloadProgress?.phase;
+    const mode = payload.mode || state.downloadProgress?.mode || state.settings.defaultDownloadMode;
+    const phase = normalizeDownloadPhase(payload.phase);
+    state.downloadProgress = { mode, phase, done, total };
+    if (phase !== prevPhase) announceDownloadPhase(phase, mode);
     updateMiniPanel();
     pulseMiniCount();
+  }
+
+  function announceDownloadPhase(phase, mode) {
+    const message = downloadPhaseMessage(phase, mode);
+    if (message) toast(message);
+  }
+
+  function downloadPhaseMessage(phase, mode) {
+    if (mode === 'zip') {
+      if (phase === 'fetching') return '正在抓取图片，请稍候…';
+      if (phase === 'packing') return '图片抓取完成，正在打包 ZIP…';
+      if (phase === 'saving') return '打包完成，正在保存到下载…';
+    }
+    if (mode === 'direct' && phase === 'active') return '正在逐张下载，请稍候…';
+    return '';
   }
 
   function normalizeDownloadPhase(phase) {
@@ -494,6 +509,7 @@
     panel.innerHTML = `
       <div class="idx-site-pill">${escapeHtml(siteTheme().badge || adapter.name)}</div>
       <div class="idx-count">0</div>
+      <div class="idx-status" role="status" aria-live="polite"></div>
       <div class="idx-actions">
         <button type="button" class="idx-secondary" data-action="select">选图<kbd data-shortcut="select">A</kbd></button>
         <button type="button" data-action="clear">清空</button>
@@ -548,6 +564,8 @@
     count.textContent = miniPanelCountText();
     count.dataset.progressLabel = miniPanelProgressLabel();
     count.title = miniPanelProgressTitle();
+    const status = panel.querySelector('.idx-status');
+    if (status) status.textContent = miniPanelStatusText();
     panel.dataset.progressPhase = state.busy && state.downloadProgress ? state.downloadProgress.phase : '';
     panel.style.setProperty('--idx-progress', `${miniPanelProgressDegrees()}deg`);
     updateShortcutHints();
@@ -566,7 +584,8 @@
 
   function miniPanelCountText() {
     if (!state.busy || !state.downloadProgress) return String(state.selected.size);
-    return String(state.downloadProgress.done);
+    // Show one monotonic overall percentage instead of a per-phase count that resets.
+    return `${Math.round(overallProgressFraction() * 100)}%`;
   }
 
   function miniPanelProgressLabel() {
@@ -578,14 +597,42 @@
     return '处理';
   }
 
+  // Human-readable line shown next to the ring while downloading, so users know
+  // which step is running instead of watching an unlabeled ring loop.
+  function miniPanelStatusText() {
+    if (!state.busy || !state.downloadProgress) return '';
+    const p = state.downloadProgress;
+    if (p.phase === 'fetching') return `正在抓取图片 ${p.done}/${p.total}`;
+    if (p.phase === 'packing') return '正在打包 ZIP…';
+    if (p.phase === 'saving') return '正在保存文件…';
+    if (p.phase === 'done') return '即将完成…';
+    if (p.mode === 'direct') return `正在逐张下载 ${p.done}/${p.total}`;
+    return '正在处理…';
+  }
+
   function miniPanelProgressTitle() {
     if (!state.busy || !state.downloadProgress) return `${state.selected.size} 张已选图片`;
-    return `${miniPanelProgressLabel()} ${state.downloadProgress.done}/${state.downloadProgress.total}`;
+    return miniPanelStatusText();
+  }
+
+  // Map the multi-phase ZIP flow onto a single 0→100% sweep so the ring fills once
+  // (fetch 0-70%, pack 70-90%, save 90-100%) instead of looping per phase.
+  function overallProgressFraction() {
+    const p = state.downloadProgress;
+    if (!p) return 0;
+    const ratio = p.total ? Math.min(1, p.done / p.total) : 0;
+    if (p.phase === 'done') return 1;
+    if (p.mode === 'zip') {
+      if (p.phase === 'packing') return 0.7 + ratio * 0.2;
+      if (p.phase === 'saving') return 0.9 + ratio * 0.1;
+      return ratio * 0.7; // fetching
+    }
+    return ratio;
   }
 
   function miniPanelProgressDegrees() {
-    if (!state.busy || !state.downloadProgress?.total) return 0;
-    return Math.round((state.downloadProgress.done / state.downloadProgress.total) * 360);
+    if (!state.busy || !state.downloadProgress) return 0;
+    return Math.round(overallProgressFraction() * 360);
   }
 
   async function toggleMiniPanelCollapsed() {

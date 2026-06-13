@@ -2,7 +2,14 @@
   --idx-accent: #ff2442;
   --idx-accent-rgb: 255, 36, 66;
   --idx-accent-dark: #d81e38;
-  --idx-ink: #1a1a1a;
+  --idx-ink: #25211d;
+  --idx-muted: rgba(37, 33, 29, 0.64);
+  --idx-line: rgba(62, 52, 42, 0.1);
+  --idx-line-strong: rgba(62, 52, 42, 0.16);
+  --idx-soft: rgba(62, 52, 42, 0.045);
+  --idx-soft-hover: rgba(62, 52, 42, 0.08);
+  --idx-surface: rgba(255, 254, 250, 0.9);
+  --idx-surface-strong: #fffefa;
   --idx-motion-fast: 120ms;
   --idx-motion-med: 150ms;
 }
@@ -22,11 +29,11 @@
   align-items: center !important;
   justify-content: center !important;
   box-sizing: border-box !important;
-  border: 1.5px solid rgba(0, 0, 0, 0.1) !important;
+  border: 1.5px solid var(--idx-line) !important;
   border-radius: 50% !important;
-  background: rgba(255, 255, 255, 0.95) !important;
-  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.12) !important;
-  color: #555 !important;
+  background: rgba(255, 254, 250, 0.95) !important;
+  box-shadow: 0 1px 5px rgba(42, 34, 26, 0.12) !important;
+  color: var(--idx-muted) !important;
   cursor: pointer !important;
   pointer-events: auto !important;
   font: 300 22px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif !important;
@@ -42,7 +49,7 @@
 
 .idx-select-btn:hover {
   transform: scale(1.1) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18) !important;
+  box-shadow: 0 2px 10px rgba(42, 34, 26, 0.18) !important;
 }
 
 .idx-select-btn:active {
@@ -98,7 +105,7 @@
   gap: 6px !important;
   max-width: calc(100vw - 36px) !important;
   padding: 6px !important;
-  border: 1px solid rgba(30, 26, 21, 0.08) !important;
+  border: 1px solid var(--idx-line) !important;
   border-radius: 999px !important;
   background: rgba(255, 254, 250, 0.86) !important;
   box-shadow: 0 12px 36px rgba(30, 24, 18, 0.12), 0 4px 14px rgba(var(--idx-accent-rgb), 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
@@ -108,7 +115,15 @@
   backdrop-filter: blur(22px) saturate(1.22) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.22) !important;
   transform-origin: right bottom !important;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease-out, border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease-out !important;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease-out, border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease-out, --idx-progress 340ms cubic-bezier(0.33, 1, 0.68, 1) !important;
+}
+
+/* Registering the angle lets the conic-gradient ring glide between updates
+   instead of snapping, so the fill reads as one smooth sweep. */
+@property --idx-progress {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
 }
 
 #idx-mini-panel[hidden] {
@@ -168,6 +183,30 @@
   transform: scale(1.08) !important;
 }
 
+.idx-status {
+  display: none !important;
+  align-items: center !important;
+  height: 38px !important;
+  padding: 0 12px 0 4px !important;
+  color: var(--idx-accent-dark) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
+  letter-spacing: 0.01em !important;
+}
+
+#idx-mini-panel.idx-busy .idx-status {
+  display: inline-flex !important;
+}
+
+#idx-mini-panel.idx-busy .idx-actions {
+  display: none !important;
+}
+
+#idx-mini-panel.idx-collapsed .idx-status {
+  display: none !important;
+}
+
 #idx-mini-panel .idx-actions {
   display: inline-flex !important;
   align-items: center !important;
@@ -175,7 +214,7 @@
   min-width: 0 !important;
   padding: 3px !important;
   border-radius: 999px !important;
-  background: rgba(32, 29, 25, 0.045) !important;
+  background: var(--idx-soft) !important;
   overflow-x: auto !important;
   scrollbar-width: none !important;
   transform-origin: right center !important;
@@ -195,7 +234,7 @@
   padding: 0 10px !important;
   border-radius: 999px !important;
   background: transparent !important;
-  color: rgba(31, 31, 28, 0.68) !important;
+  color: var(--idx-muted) !important;
   cursor: pointer !important;
   font-size: 12px !important;
   font-weight: 680 !important;
@@ -213,16 +252,16 @@
   margin-left: 4px !important;
   padding: 0 3px !important;
   border-radius: 3px !important;
-  background: rgba(0, 0, 0, 0.06) !important;
-  color: #888 !important;
+  background: var(--idx-soft-hover) !important;
+  color: rgba(37, 33, 29, 0.5) !important;
   font: 9px/1 ui-monospace, "SFMono-Regular", Menlo, monospace !important;
   opacity: 0.72 !important;
 }
 
 #idx-mini-panel button:not(:disabled):hover {
   transform: translateY(-1px) !important;
-  background: rgba(255, 255, 255, 0.72) !important;
-  color: rgba(24, 24, 22, 0.9) !important;
+  background: rgba(255, 254, 250, 0.72) !important;
+  color: var(--idx-ink) !important;
 }
 
 #idx-mini-panel button:not(:disabled):active {
@@ -248,13 +287,13 @@
 }
 
 #idx-mini-panel button.idx-dark {
-  background: rgba(28, 28, 26, 0.88) !important;
+  background: rgba(38, 34, 30, 0.88) !important;
   color: rgba(255, 255, 255, 0.94) !important;
 }
 
 #idx-mini-panel button.idx-dark:not(:disabled):hover {
-  background: rgba(16, 16, 14, 0.95) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14) !important;
+  background: rgba(26, 23, 20, 0.95) !important;
+  box-shadow: 0 6px 16px rgba(42, 34, 26, 0.14) !important;
 }
 
 #idx-mini-panel button:disabled {
@@ -270,15 +309,15 @@
   flex-shrink: 0 !important;
   margin-left: 0 !important;
   border-radius: 50% !important;
-  background: rgba(32, 29, 25, 0.04) !important;
-  color: rgba(31, 31, 28, 0.42) !important;
+  background: var(--idx-soft) !important;
+  color: rgba(37, 33, 29, 0.42) !important;
   font-size: 12px !important;
 }
 
 #idx-mini-panel .idx-fold:not(:disabled):hover {
-  color: rgba(31, 31, 28, 0.74) !important;
+  color: rgba(37, 33, 29, 0.74) !important;
   transform: none !important;
-  background: rgba(32, 29, 25, 0.075) !important;
+  background: var(--idx-soft-hover) !important;
 }
 
 .idx-fold-icon {
@@ -300,7 +339,7 @@
   justify-content: center !important;
   border: 1px solid rgba(var(--idx-accent-rgb), 0.22) !important;
   border-radius: 50% !important;
-  background: rgba(255, 254, 250, 0.9) !important;
+  background: var(--idx-surface) !important;
   box-shadow: 0 10px 28px rgba(30, 24, 18, 0.12), 0 4px 18px rgba(var(--idx-accent-rgb), 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
   cursor: pointer !important;
   backdrop-filter: blur(18px) saturate(1.18) !important;
@@ -413,9 +452,9 @@
   transform: translateY(6px) !important;
   padding: 10px 16px !important;
   border-radius: 12px !important;
-  background: rgba(20, 20, 20, 0.92) !important;
+  background: rgba(35, 31, 27, 0.92) !important;
   color: #fff !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18) !important;
+  box-shadow: 0 6px 20px rgba(42, 34, 26, 0.18) !important;
   opacity: 0 !important;
   pointer-events: none !important;
   backdrop-filter: blur(10px) !important;
@@ -453,11 +492,11 @@
   max-height: calc(100vh - 48px) !important;
   overflow-y: auto !important;
   padding: 24px !important;
-  border: 1px solid rgba(35, 30, 24, 0.08) !important;
+  border: 1px solid var(--idx-line) !important;
   border-radius: 18px !important;
-  background: #fffefa !important;
+  background: var(--idx-surface-strong) !important;
   box-shadow: 0 24px 64px rgba(32, 26, 20, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.76) !important;
-  color: #191714 !important;
+  color: var(--idx-ink) !important;
   transform: translateY(8px) scale(0.97) !important;
   transition: transform 180ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -468,14 +507,14 @@
 
 .idx-modal-card h3 {
   margin: 0 0 8px !important;
-  color: #191714 !important;
+  color: var(--idx-ink) !important;
   font-size: 17px !important;
   font-weight: 700 !important;
 }
 
 .idx-modal-card p {
   margin: 0 0 14px !important;
-  color: rgba(25, 23, 20, 0.58) !important;
+  color: var(--idx-muted) !important;
   font-size: 13px !important;
 }
 
@@ -483,11 +522,11 @@
 .idx-modal-card textarea {
   width: 100% !important;
   box-sizing: border-box !important;
-  border: 1px solid #ddd !important;
+  border: 1px solid var(--idx-line-strong) !important;
   border-radius: 10px !important;
   outline: none !important;
-  color: #111 !important;
-  background: #fff !important;
+  color: var(--idx-ink) !important;
+  background: var(--idx-surface-strong) !important;
 }
 
 .idx-modal-card input {
@@ -530,8 +569,8 @@
 }
 
 .idx-modal-cancel {
-  background: rgba(35, 30, 24, 0.07) !important;
-  color: rgba(25, 23, 20, 0.72) !important;
+  background: var(--idx-soft-hover) !important;
+  color: rgba(37, 33, 29, 0.72) !important;
 }
 
 .idx-modal-ok {
@@ -549,10 +588,10 @@
   display: grid !important;
   gap: 4px !important;
   padding: 12px 14px !important;
-  border: 1px solid rgba(35, 30, 24, 0.07) !important;
+  border: 1px solid var(--idx-line) !important;
   border-radius: 14px !important;
-  background: rgba(35, 30, 24, 0.035) !important;
-  color: #1f1c18 !important;
+  background: var(--idx-soft) !important;
+  color: var(--idx-ink) !important;
   cursor: pointer !important;
   font-size: 13px !important;
   font-weight: 720 !important;
@@ -562,7 +601,7 @@
 .idx-dl-item:hover {
   transform: translateY(-1px) !important;
   border-color: rgba(var(--idx-accent-rgb), 0.2) !important;
-  background: rgba(255, 255, 255, 0.82) !important;
+  background: rgba(255, 254, 250, 0.82) !important;
   box-shadow: 0 8px 20px rgba(32, 26, 20, 0.07) !important;
 }
 
