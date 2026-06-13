@@ -252,6 +252,7 @@
     }
     cleanupFloatingButtons(images);
     refreshSelectionUI();
+    refreshFloatingHover();
     updateMiniPanel();
   }
 
@@ -315,33 +316,47 @@
     const offset = adapter.floatingControlOffset?.(img, rect) || { x: 8, y: rect.height > 96 ? 56 : 8 };
     button.style.setProperty('left', `${Math.max(8, Math.round(rect.left + offset.x))}px`, 'important');
     button.style.setProperty('top', `${Math.max(8, Math.round(rect.top + offset.y))}px`, 'important');
-    updateFloatingHover(button, img, rect);
   }
 
   function scheduleFloatingHover() {
     if (state.dead || state.floatingRaf) return;
     state.floatingRaf = requestAnimationFrame(() => {
       state.floatingRaf = 0;
-      document.querySelectorAll('.idx-floating-select-btn').forEach((button) => {
-        if (button._idxImage) updateFloatingHover(button, button._idxImage);
-      });
+      refreshFloatingHover();
     });
   }
 
-  function updateFloatingHover(button, img, rect = img.getBoundingClientRect()) {
-    if (button.classList.contains('idx-floating-hidden')) return;
-    if (state.settings.showHoverButtons === false) {
-      button.classList.remove('idx-floating-visible');
-      return;
-    }
-    const overImage = pointerOverRect(rect);
-    const overButton = pointerOverRect(button.getBoundingClientRect());
-    button.classList.toggle('idx-floating-visible', overImage || overButton);
+  // Show the "+" for ONLY the image actually under the cursor (topmost), not every
+  // image whose rect happens to contain the pointer — otherwise overlapping pins on
+  // the feed make hovering one image light up another. Selected buttons stay visible
+  // via the .idx-active CSS rule regardless of hover.
+  function refreshFloatingHover() {
+    const buttons = document.querySelectorAll('.idx-floating-select-btn');
+    if (!buttons.length) return;
+    const target = state.settings.showHoverButtons === false ? null : floatingButtonAtPointer();
+    buttons.forEach((button) => {
+      button.classList.toggle('idx-floating-visible', button === target && !button.classList.contains('idx-floating-hidden'));
+    });
   }
 
-  function pointerOverRect(rect) {
-    if (state.mouseX < 0 || state.mouseY < 0 || !rect) return false;
-    return state.mouseX >= rect.left && state.mouseX <= rect.right && state.mouseY >= rect.top && state.mouseY <= rect.bottom;
+  function floatingButtonAtPointer() {
+    if (state.mouseX < 0 || state.mouseY < 0) return null;
+    const els = document.elementsFromPoint(state.mouseX, state.mouseY);
+    for (const el of els) {
+      if (el.classList?.contains('idx-floating-select-btn')) return el;
+      if (el.tagName === 'IMG') {
+        const button = floatingButtonForImage(el);
+        if (button) return button;
+      }
+    }
+    return null;
+  }
+
+  function floatingButtonForImage(img) {
+    for (const button of document.querySelectorAll('.idx-floating-select-btn')) {
+      if (button._idxImage === img) return button;
+    }
+    return null;
   }
 
   function cleanupFloatingButtons(images) {

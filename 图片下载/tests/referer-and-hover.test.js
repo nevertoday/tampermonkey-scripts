@@ -71,9 +71,11 @@ assert.match(
   'off-screen floating buttons must stay hidden'
 );
 
-// content.js must compute hover visibility and honor the showHoverButtons toggle
-assert.match(contentJs, /function updateFloatingHover/, 'content.js must define updateFloatingHover');
-assert.match(contentJs, /function pointerOverRect/, 'content.js must define pointerOverRect for hover hit-testing');
+// content.js must compute hover visibility for the single image under the cursor
+// (topmost via elementsFromPoint), not every image whose rect contains the pointer.
+assert.match(contentJs, /function refreshFloatingHover/, 'content.js must define refreshFloatingHover');
+assert.match(contentJs, /function floatingButtonAtPointer/, 'hover must resolve a single button via the pointer');
+assert.match(contentJs, /elementsFromPoint/, 'hover hit-testing must use elementsFromPoint for the topmost image');
 assert.match(contentJs, /showHoverButtons === false/, 'floating hover must respect the showHoverButtons setting');
 assert.match(contentJs, /scheduleFloatingHover\(\)/, 'pointermove must refresh floating hover state');
 
