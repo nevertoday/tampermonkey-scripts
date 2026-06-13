@@ -58,13 +58,13 @@
         return Array.from(root.querySelectorAll('img')).filter((img) => /pinimg\.com/i.test(img.currentSrc || img.src || '') && hasReasonableSize(img, 50, 3000));
       },
       hostFor(img) {
-        return img.closest('[data-grid-item], [data-test-id="closeup-visual-container"], a[href*="/pin/"]') || img.parentElement;
+        return img.closest('[data-grid-item], [data-test-id="pin-closeup-image"], [data-test-id="closeup-container"], [data-test-id="CloseupMainPin"], [data-test-id="closeup-visual-container"], a[href*="/pin/"]') || img.parentElement;
       },
       usesFloatingControls(img) {
         return /pinimg\.com/i.test(img.currentSrc || img.src || '');
       },
       floatingControlOffset(img, rect) {
-        return img.closest('[data-test-id="closeup-visual-container"]') || rect.height > 140
+        return img.closest('[data-test-id="pin-closeup-image"], [data-test-id="closeup-container"], [data-test-id="CloseupMainPin"], [data-test-id="closeup-visual-container"]') || rect.height > 140
           ? { x: 10, y: 14 }
           : { x: 8, y: 8 };
       },

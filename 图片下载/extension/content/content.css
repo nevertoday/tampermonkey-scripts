@@ -67,6 +67,9 @@
 
 .idx-floating-select-btn {
   position: fixed !important;
+  /* Sit above high z-index overlays (e.g. Pinterest's closeup modal), otherwise the
+     button is rendered behind the big image and can't be seen or clicked. */
+  z-index: 2147483647 !important;
   display: none !important;
 }
 
