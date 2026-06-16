@@ -3,8 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>拾图 — 在图片网站上批量拾取、下载原图</title>
-<meta name="description" content="拾图：在小红书、Pinterest、花瓣、微信公众号、500px、堆糖上悬停选图，一键打包下载原图。Chrome 扩展 + 油猴脚本，纯本地、不上传。">
+<title>拾图 — 悬停选图，批量下载原图</title>
+<meta name="description" content="拾图是一个本地运行的 Chrome 扩展和油猴脚本：悬停选择网页图片，按站点授权，批量下载原图、ZIP、链接文本，并提供历史、缓存、前缀和快捷键。">
+<meta name="theme-color" content="#ff2442">
+<link rel="canonical" href="https://shitu.xiaoxiaodong.ai/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="图片下载/extension/assets/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="图片下载/extension/assets/icon-128.png">
+<meta property="og:site_name" content="拾图">
+<meta property="og:type" content="website">
+<meta property="og:title" content="拾图 — 悬停选图，批量下载原图">
+<meta property="og:description" content="本地运行的 Chrome 扩展和油猴脚本：悬停选择网页图片，按站点授权，批量下载原图、ZIP、链接文本。">
+<meta property="og:url" content="https://shitu.xiaoxiaodong.ai/">
+<meta property="og:image" content="https://shitu.xiaoxiaodong.ai/图片下载/extension/assets/icon-128.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="拾图 — 悬停选图，批量下载原图">
+<meta name="twitter:description" content="悬停选图、按需授权、批量下载原图。全部本地运行。">
+<meta name="twitter:image" content="https://shitu.xiaoxiaodong.ai/图片下载/extension/assets/icon-128.png">
 <script>
   // Apply saved theme before paint to avoid a flash.
   (function () {
@@ -17,7 +32,7 @@
 </script>
 <style>
   :root{
-    --ink:#000; --paper:#fff;
+    --ink:#000; --paper:#fff; --accent:#ff2442;
     --g1:#f5f5f5; --g2:#e4e4e4; --g3:#bdbdbd; --g4:#8a8a8a; --g5:#555;
     /* One disciplined gray line system: --line for the regular hairline grid,
        --line-strong for structural separators, --line-soft for the faintest. */
@@ -52,7 +67,7 @@
   nav{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line-strong);transition:background-color .2s ease,border-color .2s ease;}
   nav .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;}
   .brand{font-family:var(--mono);font-weight:700;letter-spacing:.16em;font-size:15px;display:flex;align-items:center;gap:10px;}
-  .brand .sq{width:14px;height:14px;background:var(--ink);display:inline-block;transition:background-color .2s ease,transform .45s cubic-bezier(.22,1,.36,1);}
+  .brand .sq{width:16px;height:16px;background:var(--accent);display:inline-block;transition:background-color .2s ease,transform .45s cubic-bezier(.22,1,.36,1);}
   .brand:hover .sq{transform:rotate(45deg) scale(.86);}
   .navlinks{display:flex;align-items:stretch;height:60px;font-family:var(--mono);font-size:13px;}
   .navlinks a,.navlinks button{
@@ -73,8 +88,14 @@
   /* hero */
   header.hero{border-bottom:1px solid var(--line-strong);}
   .hero .wrap{padding-top:72px;}
+  .hero-title{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap;}
+  .hero-icon{width:clamp(64px,11vw,132px);height:clamp(64px,11vw,132px);border:1px solid var(--line-strong);background:var(--accent);padding:14px;display:flex;align-items:center;justify-content:center;}
+  .hero-icon img{width:100%;height:100%;object-fit:contain;}
   .hero h1{font-size:clamp(56px,12vw,160px);line-height:.92;letter-spacing:-.03em;font-weight:800;}
   .hero h1 small{display:block;font-family:var(--mono);font-size:clamp(14px,2.4vw,24px);font-weight:600;letter-spacing:.32em;color:var(--g4);margin-bottom:18px;}
+  .release{display:inline-flex;margin-top:22px;border:1px solid var(--line-strong);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
+  .release span{padding:8px 12px;border-left:1px solid var(--line);}
+  .release span:first-child{border-left:none;background:var(--ink);color:var(--paper);}
   .hero .tag{font-size:clamp(18px,2.6vw,30px);font-weight:600;max-width:820px;margin-top:28px;}
   .hero .sub{color:var(--g5);max-width:660px;margin-top:16px;}
   .cta{display:flex;flex-wrap:wrap;gap:0;margin:40px 0 64px;border:1px solid var(--line-strong);width:max-content;max-width:100%;}
@@ -93,6 +114,13 @@
   .stat:first-child{border-left:none;}
   .stat .n{font-size:clamp(34px,5vw,56px);font-weight:800;letter-spacing:-.02em;line-height:1;}
   .stat .l{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--g5);margin-top:12px;}
+
+  .notice{display:grid;grid-template-columns:1.1fr 1.6fr;border-top:1px solid var(--line);margin-bottom:64px;}
+  .notice > div{padding:28px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .notice > div:last-child{border-right:none;}
+  .notice h3{font-size:22px;font-weight:800;letter-spacing:-.01em;}
+  .notice p{margin-top:10px;color:var(--g5);}
+  .notice .mini{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--g5);}
 
   section{border-bottom:1px solid var(--line-strong);}
   .sechead{display:flex;align-items:baseline;justify-content:space-between;gap:24px;padding:64px 0 36px;flex-wrap:wrap;}
@@ -114,13 +142,16 @@
     background-image:linear-gradient(var(--ink),var(--ink));
     background-repeat:no-repeat;background-position:left center;background-size:0% 100%;
     transition:background-size .42s cubic-bezier(.45,0,.15,1),color .42s ease;}
-  .cell .idx,.cell .name,.cell .dom{transition:transform .42s cubic-bezier(.22,1,.36,1),color .42s ease;}
+  .cell .idx,.cell .name,.cell .dom,.site-action{transition:transform .42s cubic-bezier(.22,1,.36,1),color .42s ease,border-color .42s ease;}
   .cell:hover{background-size:100% 100%;color:var(--paper);}
-  .cell:hover .idx,.cell:hover .name,.cell:hover .dom{transform:translateX(6px);}
+  .cell:hover .idx,.cell:hover .name,.cell:hover .dom,.cell:hover .site-action{transform:translateX(6px);}
   .cell .idx{font-family:var(--mono);font-size:12px;color:var(--g4);letter-spacing:.1em;}
   .cell:hover .idx,.cell:hover .dom{color:var(--g3);}
   .cell .name{font-size:24px;font-weight:800;letter-spacing:-.01em;margin-top:8px;}
   .cell .dom{font-family:var(--mono);font-size:13px;color:var(--g5);margin-top:6px;}
+  .site-action{width:max-content;max-width:100%;margin-top:16px;padding:6px 9px;border:1px solid var(--line-strong);font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.06em;}
+  .site-action.is-muted{color:var(--g5);}
+  .cell:hover .site-action{border-color:var(--paper);color:var(--paper);}
 
   .feats{grid-template-columns:repeat(3,1fr);margin-bottom:64px;}
   .feat{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:30px 28px;position:relative;transition:background-color .35s ease;}
@@ -149,6 +180,13 @@
   .flavor p{color:var(--g5);margin-bottom:22px;}
   .flavor ul{list-style:none;margin-bottom:26px;}
   .flavor li{padding:10px 0;border-top:1px solid var(--line);font-size:15px;}
+  .script-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:2px 0 22px;}
+  .script-list a{min-width:0;padding:10px 12px;border:1px solid var(--line);font-family:var(--mono);font-size:12px;font-weight:800;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    background-color:transparent;
+    background-image:linear-gradient(var(--ink),var(--ink));
+    background-repeat:no-repeat;background-position:left center;background-size:0% 100%;
+    transition:background-size .38s cubic-bezier(.45,0,.15,1),color .38s ease,border-color .38s ease;}
+  .script-list a:hover{background-size:100% 100%;color:var(--paper);border-color:var(--ink);}
   .flavor .linkbtn{font-family:var(--mono);font-size:13px;font-weight:700;border:1px solid var(--line-strong);padding:12px 18px;display:inline-flex;gap:10px;align-items:center;color:inherit;
     background-color:transparent;
     background-image:linear-gradient(var(--ink),var(--ink));
@@ -193,14 +231,18 @@
     .stat:nth-child(3){border-left:none;}
     .sites,.feats{grid-template-columns:repeat(2,1fr);}
     .steps{grid-template-columns:repeat(2,1fr);}
-    .twocol,.flavors{grid-template-columns:1fr;}
+    .twocol,.flavors,.notice{grid-template-columns:1fr;}
     .twocol > div:last-child{border-left:none;border-top:1px solid var(--line);padding-left:0;}
+    .notice > div{border-right:none;}
     .flavor{border-right:none;border-bottom:1px solid var(--line);}
     .navlinks a.navhide{display:none;}
   }
   @media(max-width:560px){
-    .sites,.feats{grid-template-columns:1fr;}
+    .sites,.feats,.steps{grid-template-columns:1fr;}
     .shots{grid-template-columns:1fr;}
+    .script-list{grid-template-columns:1fr;}
+    .navlinks a.gh{display:none;}
+    .hero .wrap{padding-top:54px;}
   }
 </style>
 </head>
@@ -222,9 +264,13 @@
 
 <header class="hero" id="top">
   <div class="wrap">
-    <h1><small data-i18n="heroKicker">图片拾取工作台 / IMAGE PICKER</small>拾图</h1>
-    <p class="tag" data-i18n="heroTag">把散落在网页里的好图，一张张拾起来。</p>
-    <p class="sub" data-i18n="heroSub">在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。</p>
+    <div class="hero-title">
+      <div class="hero-icon" aria-hidden="true"><img src="favicon.svg" alt=""></div>
+      <h1><small data-i18n="heroKicker">Chrome 扩展 0.1.5 / IMAGE PICKER</small>拾图</h1>
+    </div>
+    <div class="release"><span>MV3</span><span data-i18n="releaseCopy">按需授权 · 本地运行 · 侧边栏工作台</span></div>
+    <p class="tag" data-i18n="heroTag">把网页里的好图拾进一个可下载的批次。</p>
+    <p class="sub" data-i18n="heroSub">悬停选图、键盘选图、粘贴直链都可以。下载前可改文件名前缀，导出 ZIP、逐张保存或链接文本；历史、缓存和站点权限都在侧边栏里管理。</p>
     <div class="cta">
       <a class="btn solid" href="https://github.com/nevertoday/tampermonkey-scripts" target="_blank" rel="noopener" data-i18n="ctaGet">在 GitHub 获取 →</a>
       <a class="btn" href="#install" data-i18n="ctaInstall">安装方法</a>
@@ -232,10 +278,10 @@
   </div>
   <div class="wrap">
     <div class="stats">
-      <div class="stat"><div class="n">6</div><div class="l" data-i18n="statSites">支持站点</div></div>
+      <div class="stat"><div class="n">10</div><div class="l" data-i18n="statSites">扩展适配站点</div></div>
       <div class="stat"><div class="n">3</div><div class="l" data-i18n="statModes">下载方式</div></div>
       <div class="stat"><div class="n">0</div><div class="l" data-i18n="statUploads">服务器上传</div></div>
-      <div class="stat"><div class="n">100%</div><div class="l" data-i18n="statLocal">本地运行</div></div>
+      <div class="stat"><div class="n" data-i18n="statPermissionN">按需</div><div class="l" data-i18n="statPermission">网站授权</div></div>
     </div>
   </div>
 </header>
@@ -268,22 +314,35 @@
         </ul>
       </div>
     </div>
+    <div class="notice">
+      <div>
+        <div class="mini" data-i18n="noticeK">Chrome 审核友好</div>
+        <h3 data-i18n="noticeH">不再默认索要所有网站权限。</h3>
+      </div>
+      <div>
+        <p data-i18n="noticeP">新版扩展把主机权限改为可选权限。只有当你在支持的网站打开侧边栏并点击授权时，拾图才会请求当前站点及其图片域名的访问权；点错或取消后，也可以再次点击授权。</p>
+      </div>
+    </div>
   </div>
 </section>
 
 <section id="sites">
   <div class="wrap">
     <div class="sechead">
-      <h2 data-i18n="sitesH">六个主流平台，一套操作。</h2>
+      <h2 data-i18n="sitesH">扩展适配十个站点，脚本保留六个单文件版本。</h2>
       <p class="eyebrow"><b>02</b> <span data-i18n="sitesEyebrow">支持站点</span></p>
     </div>
     <div class="grid sites">
-      <div class="cell"><span class="idx">01</span><div><div class="name" data-i18n="siteXhs">小红书</div><div class="dom">xiaohongshu.com</div></div></div>
-      <div class="cell"><span class="idx">02</span><div><div class="name">Pinterest</div><div class="dom">pinterest.com</div></div></div>
-      <div class="cell"><span class="idx">03</span><div><div class="name" data-i18n="siteHuaban">花瓣</div><div class="dom">huaban.com</div></div></div>
-      <div class="cell"><span class="idx">04</span><div><div class="name" data-i18n="siteWechat">微信公众号</div><div class="dom">mp.weixin.qq.com</div></div></div>
-      <div class="cell"><span class="idx">05</span><div><div class="name">500px</div><div class="dom">500px.com</div></div></div>
-      <div class="cell"><span class="idx">06</span><div><div class="name" data-i18n="siteDuitang">堆糖</div><div class="dom">duitang.com</div></div></div>
+      <div class="cell"><span class="idx">01</span><div><div class="name" data-i18n="siteXhs">小红书</div><div class="dom">xiaohongshu.com</div><a class="site-action" href="图片下载/小红书-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">02</span><div><div class="name">Pinterest</div><div class="dom">pinterest.com</div><a class="site-action" href="图片下载/pinterest-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">03</span><div><div class="name">X</div><div class="dom">x.com</div><span class="site-action is-muted" data-i18n="extensionOnly">扩展版支持</span></div></div>
+      <div class="cell"><span class="idx">04</span><div><div class="name" data-i18n="siteWechat">微信公众号</div><div class="dom">mp.weixin.qq.com</div><a class="site-action" href="图片下载/微信公众号-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">05</span><div><div class="name">500px</div><div class="dom">500px.com</div><a class="site-action" href="图片下载/500px-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">06</span><div><div class="name" data-i18n="siteDuitang">堆糖</div><div class="dom">duitang.com</div><a class="site-action" href="图片下载/堆糖-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">07</span><div><div class="name" data-i18n="siteHuaban">花瓣</div><div class="dom">huaban.com</div><a class="site-action" href="图片下载/花瓣-图片选择器.user.js" data-i18n="scriptDownload">油猴脚本</a></div></div>
+      <div class="cell"><span class="idx">08</span><div><div class="name">Dribbble</div><div class="dom">dribbble.com</div><span class="site-action is-muted" data-i18n="extensionOnly">扩展版支持</span></div></div>
+      <div class="cell"><span class="idx">09</span><div><div class="name">Instagram</div><div class="dom">instagram.com</div><span class="site-action is-muted" data-i18n="extensionOnly">扩展版支持</span></div></div>
+      <div class="cell"><span class="idx">10</span><div><div class="name">Behance</div><div class="dom">behance.net</div><span class="site-action is-muted" data-i18n="extensionOnly">扩展版支持</span></div></div>
     </div>
   </div>
 </section>
@@ -295,12 +354,12 @@
       <p class="eyebrow"><b>03</b> <span data-i18n="featEyebrow">核心能力</span></p>
     </div>
     <div class="grid feats">
-      <div class="feat"><div class="fn">F/01</div><h3 data-i18n="f1h">悬停选图</h3><p data-i18n="f1p">鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。</p></div>
+      <div class="feat"><div class="fn">F/01</div><h3 data-i18n="f1h">悬停与键盘选图</h3><p data-i18n="f1p">鼠标移到图片上才出现选择按钮；也可用快捷键选中指针下的图，避免误选整页。</p></div>
       <div class="feat"><div class="fn">F/02</div><h3 data-i18n="f2h">三种下载</h3><p data-i18n="f2p">打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。</p></div>
-      <div class="feat"><div class="fn">F/03</div><h3 data-i18n="f3h">原图还原</h3><p data-i18n="f3p">针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。</p></div>
-      <div class="feat"><div class="fn">F/04</div><h3 data-i18n="f4h">历史回看</h3><p data-i18n="f4p">每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。</p></div>
-      <div class="feat"><div class="fn">F/05</div><h3 data-i18n="f5h">多标签联动</h3><p data-i18n="f5p">同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。</p></div>
-      <div class="feat"><div class="fn">F/06</div><h3 data-i18n="f6h">本地缓存</h3><p data-i18n="f6p">图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。</p></div>
+      <div class="feat"><div class="fn">F/03</div><h3 data-i18n="f3h">下载前缀可编辑</h3><p data-i18n="f3p">导出弹框默认带站点文件名规则，也允许你临时改前缀，方便按项目、日期或批次归档。</p></div>
+      <div class="feat"><div class="fn">F/04</div><h3 data-i18n="f4h">历史与筛选</h3><p data-i18n="f4p">每次下载/复制都留底，可按平台筛选、滚动预览缩略图、一键重新下载。</p></div>
+      <div class="feat"><div class="fn">F/05</div><h3 data-i18n="f5h">直链下载</h3><p data-i18n="f5p">无需打开网页，直接粘贴图片链接列表，也能按同样的 ZIP、逐张、链接文本流程导出。</p></div>
+      <div class="feat"><div class="fn">F/06</div><h3 data-i18n="f6h">本地缓存</h3><p data-i18n="f6p">图片字节存进本地，链接过期也能预览和重新下载；缓存可随时在设置里清除。</p></div>
     </div>
   </div>
 </section>
@@ -324,30 +383,38 @@
 <section id="flavors">
   <div class="wrap">
     <div class="sechead">
-      <h2 data-i18n="flavH">两种用法，同一套能力。</h2>
+      <h2 data-i18n="flavH">扩展是主线，油猴脚本继续保留。</h2>
       <p class="eyebrow"><b>05</b> <span data-i18n="flavEyebrow">怎么装</span></p>
     </div>
     <div class="flavors">
       <div class="flavor">
         <div class="k" data-i18n="flav1k">推荐 / Chrome MV3</div>
         <h3 data-i18n="flav1h">浏览器扩展</h3>
-        <p data-i18n="flav1p">原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。</p>
+        <p data-i18n="flav1p">原生侧边栏，把站点授权、直链下载、历史、设置、缓存、前缀和快捷键集中在面板里。</p>
         <ul>
-          <li data-i18n="flav1l1">侧边栏：站点 / 历史 / 设置</li>
-          <li data-i18n="flav1l2">历史预览 + 一键重新下载</li>
-          <li data-i18n="flav1l3">防盗链改写 + 本地缓存兜底</li>
+          <li data-i18n="flav1l1">按站点请求权限，不默认索要主机权限</li>
+          <li data-i18n="flav1l2">历史预览、平台筛选、一键重新下载</li>
+          <li data-i18n="flav1l3">防盗链改写、本地缓存、可编辑文件名前缀</li>
         </ul>
         <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载/extension" target="_blank" rel="noopener" data-i18n="flav1link">扩展源码 →</a>
       </div>
       <div class="flavor">
         <div class="k" data-i18n="flav2k">免装扩展 / Tampermonkey</div>
         <h3 data-i18n="flav2h">油猴脚本</h3>
-        <p data-i18n="flav2p">不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。</p>
+        <p data-i18n="flav2p">不想装扩展？六个站点仍提供独立用户脚本，单文件即用，适合轻量场景。</p>
         <ul>
           <li data-i18n="flav2l1">6 个站点，各自独立单文件</li>
           <li data-i18n="flav2l2">页面右下角常驻 Dock</li>
           <li data-i18n="flav2l3">选择状态跨页面持久保留</li>
         </ul>
+        <div class="script-list" aria-label="油猴脚本下载">
+          <a href="图片下载/小红书-图片选择器.user.js" data-i18n="siteXhs">小红书</a>
+          <a href="图片下载/pinterest-图片选择器.user.js">Pinterest</a>
+          <a href="图片下载/微信公众号-图片选择器.user.js" data-i18n="siteWechat">微信公众号</a>
+          <a href="图片下载/500px-图片选择器.user.js">500px</a>
+          <a href="图片下载/堆糖-图片选择器.user.js" data-i18n="siteDuitang">堆糖</a>
+          <a href="图片下载/花瓣-图片选择器.user.js" data-i18n="siteHuaban">花瓣</a>
+        </div>
         <a class="linkbtn" href="https://github.com/nevertoday/tampermonkey-scripts/tree/main/图片下载" target="_blank" rel="noopener" data-i18n="flav2link">脚本目录 →</a>
       </div>
     </div>
@@ -364,7 +431,7 @@
       <div class="step"><div class="num">1</div><h3 data-i18n="step1h">下载仓库</h3><p data-i18n="step1p">克隆或下载 ZIP 后解压到本地。</p></div>
       <div class="step"><div class="num">2</div><h3 data-i18n="step2h">打开扩展页</h3><p data-i18n-html="step2p">地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。</p></div>
       <div class="step"><div class="num">3</div><h3 data-i18n="step3h">加载扩展</h3><p data-i18n-html="step3p">点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。</p></div>
-      <div class="step"><div class="num">4</div><h3 data-i18n="step4h">开始拾图</h3><p data-i18n="step4p">打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。</p></div>
+      <div class="step"><div class="num">4</div><h3 data-i18n="step4h">授权并拾图</h3><p data-i18n="step4p">打开支持的网站，点工具栏图标唤出侧边栏，按提示授权当前站点后开始选择图片。</p></div>
     </div>
   </div>
 </section>
@@ -392,13 +459,14 @@
 <script>
   var I18N = {
     zh: {
-      title:'拾图 — 在图片网站上批量拾取、下载原图',
+      title:'拾图 — 悬停选图，批量下载原图',
       navSites:'站点', navFeatures:'能力', navInstall:'安装',
-      heroKicker:'图片拾取工作台 / IMAGE PICKER',
-      heroTag:'把散落在网页里的好图，一张张拾起来。',
-      heroSub:'在图片网站上悬停勾选、一键批量下载原图。像在文件管理器里选文件一样轻，全程留在你本机，不上传任何图片。',
+      heroKicker:'Chrome 扩展 0.1.5 / IMAGE PICKER',
+      releaseCopy:'按需授权 · 本地运行 · 侧边栏工作台',
+      heroTag:'把网页里的好图拾进一个可下载的批次。',
+      heroSub:'悬停选图、键盘选图、粘贴直链都可以。下载前可改文件名前缀，导出 ZIP、逐张保存或链接文本；历史、缓存和站点权限都在侧边栏里管理。',
       ctaGet:'在 GitHub 获取 →', ctaInstall:'安装方法',
-      statSites:'支持站点', statModes:'下载方式', statUploads:'服务器上传', statLocal:'本地运行',
+      statSites:'扩展适配站点', statModes:'下载方式', statUploads:'服务器上传', statPermissionN:'按需', statPermission:'网站授权',
       whyH:'图片网站擅长展示，却不擅长帮你整理。', whyEyebrow:'它解决的问题',
       painH:'过去的麻烦',
       pain1:'右键保存太慢，连续存几十张打断思路。',
@@ -412,41 +480,46 @@
       way3:'自动把缩略图还原为最高画质原图链接。',
       way4:'统一侧边栏：站点、历史、设置、前缀集中管理。',
       way5:'选择跨标签页、跨滚动持久保留，计数实时联动。',
-      sitesH:'六个主流平台，一套操作。', sitesEyebrow:'支持站点',
+      noticeK:'Chrome 审核友好',
+      noticeH:'不再默认索要所有网站权限。',
+      noticeP:'新版扩展把主机权限改为可选权限。只有当你在支持的网站打开侧边栏并点击授权时，拾图才会请求当前站点及其图片域名的访问权；点错或取消后，也可以再次点击授权。',
+      sitesH:'扩展适配十个站点，脚本保留六个单文件版本。', sitesEyebrow:'支持站点',
+      scriptDownload:'油猴脚本', extensionOnly:'扩展版支持',
       siteXhs:'小红书', siteHuaban:'花瓣', siteWechat:'微信公众号', siteDuitang:'堆糖',
       featH:'为收集与整理而做的细节。', featEyebrow:'核心能力',
-      f1h:'悬停选图', f1p:'鼠标移到图片上才出现「＋」，点击选中；也可用键盘快捷键选中指针下的图。',
+      f1h:'悬停与键盘选图', f1p:'鼠标移到图片上才出现选择按钮；也可用快捷键选中指针下的图，避免误选整页。',
       f2h:'三种下载', f2p:'打包 ZIP、逐张保存原图、或导出链接文本，配合 IDM / aria2 也行。',
-      f3h:'原图还原', f3p:'针对每个站点剥离缩略标记、清理签名参数，尽量拿到最高画质。',
-      f4h:'历史回看', f4p:'每次下载/复制都留底，可按站点筛选、滚动预览缩略图、一键重新下载。',
-      f5h:'多标签联动', f5p:'同一站点的多个标签共享一份选择，计数实时同步，不再各算各的。',
-      f6h:'本地缓存', f6p:'图片字节存进本地，链接过期也能预览和重新下载——不上传任何服务器。',
+      f3h:'下载前缀可编辑', f3p:'导出弹框默认带站点文件名规则，也允许你临时改前缀，方便按项目、日期或批次归档。',
+      f4h:'历史与筛选', f4p:'每次下载/复制都留底，可按平台筛选、滚动预览缩略图、一键重新下载。',
+      f5h:'直链下载', f5p:'无需打开网页，直接粘贴图片链接列表，也能按同样的 ZIP、逐张、链接文本流程导出。',
+      f6h:'本地缓存', f6p:'图片字节存进本地，链接过期也能预览和重新下载；缓存可随时在设置里清除。',
       shotsH:'真实站点上的实际效果。', shotsEyebrow:'截图 · 悬停看原色',
       capPinterest:'批量收集灵感图', capXhs:'笔记瀑布流', capPx:'摄影大图', capDt:'壁纸瀑布流', capDlK:'下载', capDl:'三种方式',
-      flavH:'两种用法，同一套能力。', flavEyebrow:'怎么装',
+      flavH:'扩展是主线，油猴脚本继续保留。', flavEyebrow:'怎么装',
       flav1k:'推荐 / Chrome MV3', flav1h:'浏览器扩展',
-      flav1p:'原生侧边栏，把站点切换、历史、设置、下载集中在面板里，不占网页空间。',
-      flav1l1:'侧边栏：站点 / 历史 / 设置', flav1l2:'历史预览 + 一键重新下载', flav1l3:'防盗链改写 + 本地缓存兜底', flav1link:'扩展源码 →',
+      flav1p:'原生侧边栏，把站点授权、直链下载、历史、设置、缓存、前缀和快捷键集中在面板里。',
+      flav1l1:'按站点请求权限，不默认索要主机权限', flav1l2:'历史预览、平台筛选、一键重新下载', flav1l3:'防盗链改写、本地缓存、可编辑文件名前缀', flav1link:'扩展源码 →',
       flav2k:'免装扩展 / Tampermonkey', flav2h:'油猴脚本',
-      flav2p:'不想装扩展？每个站点一个独立用户脚本，单文件即用，能力与扩展一致。',
+      flav2p:'不想装扩展？六个站点仍提供独立用户脚本，单文件即用，适合轻量场景。',
       flav2l1:'6 个站点，各自独立单文件', flav2l2:'页面右下角常驻 Dock', flav2l3:'选择状态跨页面持久保留', flav2link:'脚本目录 →',
       instH:'四步开始使用。', instEyebrow:'安装 · Chrome 扩展',
       step1h:'下载仓库', step1p:'克隆或下载 ZIP 后解压到本地。',
       step2h:'打开扩展页', step2p:'地址栏进入 <code>chrome://extensions</code>，开启右上角「开发者模式」。',
       step3h:'加载扩展', step3p:'点「加载已解压的扩展程序」，选择 <code>图片下载/extension</code> 目录。',
-      step4h:'开始拾图', step4p:'打开支持的网站，点工具栏图标唤出侧边栏，悬停图片选择。',
+      step4h:'授权并拾图', step4p:'打开支持的网站，点工具栏图标唤出侧边栏，按提示授权当前站点后开始选择图片。',
       endKicker:'开源 · 免费 · MIT', endH:'在 GitHub 上获取',
       endP:'源码、扩展、六个站点的油猴脚本都在同一个仓库。欢迎 Star、提 Issue、一起适配更多站点。',
       endZip:'下载 ZIP', footName:'拾图 — 图片拾取工作台'
     },
     en: {
-      title:'拾图 Shitu — Pick & batch-download original images on image sites',
+      title:'拾图 Shitu — Hover, pick, and batch-download original images',
       navSites:'Sites', navFeatures:'Features', navInstall:'Install',
-      heroKicker:'IMAGE PICKER WORKBENCH',
-      heroTag:'Pick up the good images scattered across the web, one by one.',
-      heroSub:'Hover to select and batch-download original images on image sites. As light as picking files in a file manager — everything stays on your machine, nothing is uploaded.',
+      heroKicker:'CHROME EXTENSION 0.1.5 / IMAGE PICKER',
+      releaseCopy:'On-demand access · local-only · side-panel workbench',
+      heroTag:'Turn good images on a web page into a downloadable batch.',
+      heroSub:'Pick by hover, pick by keyboard, or paste direct image links. Edit the filename prefix before export, then save a ZIP, individual files, or a link list; history, cache, and site access live in the side panel.',
       ctaGet:'Get it on GitHub →', ctaInstall:'How to install',
-      statSites:'Supported sites', statModes:'Download modes', statUploads:'Server uploads', statLocal:'Local-only',
+      statSites:'Extension sites', statModes:'Download modes', statUploads:'Server uploads', statPermissionN:'On tap', statPermission:'Site access',
       whyH:'Image sites are great at showing, not at helping you organize.', whyEyebrow:'The problem it solves',
       painH:'The old hassle',
       pain1:'Right-click-saving is slow; saving dozens in a row breaks your flow.',
@@ -460,29 +533,33 @@
       way3:'Automatically restores thumbnails to the highest-quality original URL.',
       way4:'One side panel: sites, history, settings and prefixes in one place.',
       way5:'Selection persists across tabs and scrolling, with a live synced count.',
-      sitesH:'Six major platforms, one workflow.', sitesEyebrow:'Supported sites',
+      noticeK:'Chrome review friendly',
+      noticeH:'No broad host access by default.',
+      noticeP:'The extension now uses optional host permissions. It asks for access only after you open the side panel on a supported site and click Grant, covering that site and its image hosts. If you cancel by mistake, the same prompt remains available.',
+      sitesH:'The extension adapts ten sites; userscripts keep six standalone versions.', sitesEyebrow:'Supported sites',
+      scriptDownload:'Userscript', extensionOnly:'Extension only',
       siteXhs:'Xiaohongshu', siteHuaban:'Huaban', siteWechat:'WeChat Articles', siteDuitang:'Duitang',
       featH:'Details built for collecting and organizing.', featEyebrow:'Core features',
-      f1h:'Hover to pick', f1p:'The “＋” appears only when you hover an image; click to select, or use a keyboard shortcut for the image under the cursor.',
+      f1h:'Hover and keyboard pick', f1p:'The select button appears only when you hover an image; keyboard shortcuts select the image under the cursor instead of the whole page.',
       f2h:'Three download modes', f2p:'Pack a ZIP, save originals one by one, or export a link list for IDM / aria2.',
-      f3h:'Original restore', f3p:'Per-site stripping of thumbnail markers and signed params to get the highest quality.',
-      f4h:'History', f4p:'Every download/copy is logged — filter by site, scroll-preview thumbnails, re-download in one click.',
-      f5h:'Multi-tab sync', f5p:'Tabs of the same site share one selection with a live synced count.',
-      f6h:'Local cache', f6p:'Image bytes are kept locally, so previews and re-downloads work even after links expire — nothing is uploaded.',
+      f3h:'Editable filename prefix', f3p:'The export dialog starts with the site filename rule, and lets you change the prefix for projects, dates, or batches.',
+      f4h:'History and filters', f4p:'Every download/copy is logged — filter by platform, scroll-preview thumbnails, re-download in one click.',
+      f5h:'Direct-link download', f5p:'Paste image URLs without opening a page, then use the same ZIP, save-each, or link-list flow.',
+      f6h:'Local cache', f6p:'Image bytes are kept locally, so previews and re-downloads work even after links expire; clear the cache any time in Settings.',
       shotsH:'Real results on real sites.', shotsEyebrow:'Screenshots · hover for color',
       capPinterest:'Collect inspiration in bulk', capXhs:'Note masonry', capPx:'Photography', capDt:'Wallpaper masonry', capDlK:'Download', capDl:'Three modes',
-      flavH:'Two ways to use it, same capabilities.', flavEyebrow:'How to get it',
+      flavH:'The extension is the main path; userscripts stay available.', flavEyebrow:'How to get it',
       flav1k:'Recommended / Chrome MV3', flav1h:'Browser extension',
-      flav1p:'A native side panel keeps site switching, history, settings and downloads in one place, off your page.',
-      flav1l1:'Side panel: Sites / History / Settings', flav1l2:'History preview + one-click re-download', flav1l3:'Referer rewrite + local-cache fallback', flav1link:'Extension source →',
+      flav1p:'A native side panel keeps site access, link download, history, settings, cache, prefixes, and shortcuts in one place.',
+      flav1l1:'Requests site access per site, not broad host access by default', flav1l2:'History preview, platform filters, one-click re-download', flav1l3:'Referer rewrite, local cache, editable filename prefix', flav1link:'Extension source →',
       flav2k:'No extension / Tampermonkey', flav2h:'Userscripts',
-      flav2p:'Don’t want an extension? One standalone userscript per site, single-file, same capabilities.',
+      flav2p:'Don’t want an extension? Six sites still have standalone userscripts, each a single file for lighter use.',
       flav2l1:'6 sites, each a standalone file', flav2l2:'A Dock pinned at the bottom-right', flav2l3:'Selection persists across pages', flav2link:'Scripts folder →',
       instH:'Start in four steps.', instEyebrow:'Install · Chrome extension',
       step1h:'Download the repo', step1p:'Clone or download the ZIP and unzip it locally.',
       step2h:'Open extensions', step2p:'Go to <code>chrome://extensions</code> and turn on “Developer mode” (top-right).',
       step3h:'Load unpacked', step3p:'Click “Load unpacked” and choose the <code>图片下载/extension</code> folder.',
-      step4h:'Start picking', step4p:'Open a supported site, click the toolbar icon to open the side panel, and hover images to select.',
+      step4h:'Grant and pick', step4p:'Open a supported site, click the toolbar icon to open the side panel, grant access when prompted, then start selecting images.',
       endKicker:'Open source · Free · MIT', endH:'Get it on GitHub',
       endP:'Source, the extension, and userscripts for six sites all live in one repo. Stars, issues and new-site PRs welcome.',
       endZip:'Download ZIP', footName:'拾图 — image picker workbench'

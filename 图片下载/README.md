@@ -2,7 +2,7 @@
 
 把散落在网页里的好图，一张张拾起来。
 
-🌐 官网：<https://nevertoday.github.io/tampermonkey-scripts/>
+🌐 官网：<https://shitu.xiaoxiaodong.ai/>
 
 拾图 是一个面向图片收集、素材整理和视觉参考归档的 Chrome 扩展，也保留了对应站点的油猴脚本版本。它让你继续在原网站里浏览、判断和筛选，只把重复的动作收拢起来：选图、计数、复制链接、批量下载、历史回看、站点开关和文件名前缀。
 
