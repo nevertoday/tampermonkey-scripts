@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "拾图",
   "short_name": "拾图",
-  "version": "0.1.3",
-  "description": "在小红书、Pinterest、X、Instagram、Dribbble、花瓣、微信公众号、500px、堆糖中拾取图片，并通过侧边栏批量下载。",
+  "version": "0.1.4",
+  "description": "悬停网页图片即可拾取，通过侧边栏批量下载原图。支持打包 ZIP、逐张保存或导出链接列表，也可粘贴图片直链直接下载。已适配多个主流图片与灵感网站。",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",
