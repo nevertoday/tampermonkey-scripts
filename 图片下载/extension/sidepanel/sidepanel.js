@@ -75,6 +75,7 @@ const DEFAULT_SETTINGS = {
   miniPanelCollapsed: false,
   showHoverButtons: true,
   enableShortcuts: true,
+  language: 'zh',
   defaultDownloadMode: 'zip',
   shortcuts: {
     select: 'a',
@@ -89,35 +90,24 @@ const DEFAULT_SETTINGS = {
   sites: Object.fromEntries(SITES.map((site) => [site.id, { enabled: true, prefix: site.defaultPrefix }]))
 };
 const HISTORY_KEY = 'downloadHistory';
-const SHORTCUT_LABELS = {
-  select: '选图',
-  alternateSelect: '备用选图',
-  download: '下载',
-  newBatch: '新批次',
-  clear: '清空',
-  downloadLinks: '链接列表',
-  downloadDirect: '逐张下载',
-  downloadZip: 'ZIP 压缩包'
+const I18n = window.ImageDownloaderI18n;
+const t = (key, vars) => I18n.t(key, vars);
+// Maps each shortcut action to its i18n key so labels/messages localize.
+const SHORTCUT_KEYS = {
+  select: 'sc_select',
+  alternateSelect: 'sc_alt',
+  download: 'sc_download',
+  newBatch: 'sc_newbatch',
+  clear: 'sc_clear',
+  downloadLinks: 'sc_links',
+  downloadDirect: 'sc_direct',
+  downloadZip: 'sc_zip'
 };
+const shortcutActionLabel = (action) => t(SHORTCUT_KEYS[action] || action);
 const DONATION_OPTIONS = {
-  wechat: {
-    label: '微信',
-    detail: '用微信扫码支持作者。',
-    src: '../assets/donate-wechat.png',
-    missing: '未找到 donate-wechat.png'
-  },
-  alipay: {
-    label: '支付宝',
-    detail: '用支付宝扫码支持作者。',
-    src: '../assets/donate-alipay.png',
-    missing: '未找到 donate-alipay.png'
-  },
-  compute: {
-    label: '银联赞赏',
-    detail: '支持持续适配更多图片站点和下载场景。',
-    src: '../assets/donate-compute.png',
-    missing: '未找到 donate-compute.png'
-  }
+  wechat: { key: 'donate_wechat', src: '../assets/donate-wechat.png', missing: '未找到 donate-wechat.png' },
+  alipay: { key: 'donate_alipay', src: '../assets/donate-alipay.png', missing: '未找到 donate-alipay.png' },
+  compute: { key: 'donate_compute', src: '../assets/donate-compute.png', missing: '未找到 donate-compute.png' }
 };
 
 let settings = DEFAULT_SETTINGS;
@@ -133,6 +123,8 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   settings = await loadSettings();
+  I18n.setLang(settings.language);
+  applyI18n();
   activeTab = await getActiveTab();
   bindTabs();
   bindHistory();
@@ -160,8 +152,12 @@ async function init() {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'sync' && changes.settings) {
       settings = normalizeSettings(changes.settings.newValue);
+      I18n.setLang(settings.language);
+      applyI18n();
       renderSettings();
       renderSites();
+      renderHistoryFilter();
+      renderHistory();
       refreshCurrentTabSettings();
     }
     if (area === 'local' && changes[HISTORY_KEY]) {
@@ -170,6 +166,28 @@ async function init() {
       renderHistory();
     }
   });
+}
+
+// Walk the static markup and localize every tagged node. Re-run on language
+// change; dynamic content (sites/history) is re-rendered separately.
+function applyI18n() {
+  document.documentElement.lang = I18n.lang === 'en' ? 'en' : 'zh-CN';
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach((el) => {
+    el.setAttribute('placeholder', t(el.dataset.i18nPh));
+  });
+}
+
+// Localized display name/badge for a site by id, falling back to its stored
+// (Chinese or brand) label when there's no translation.
+function siteDisplayName(site) {
+  return site ? I18n.siteName(site.id, site.name) : t('images_word');
+}
+
+function siteDisplayBadge(site, theme) {
+  return I18n.siteBadge(site.id, theme?.badge || site?.name);
 }
 
 function bindDonation() {
@@ -186,7 +204,7 @@ function bindLinkDownload() {
   const actionButtons = document.querySelectorAll('[data-link-mode]');
   const refresh = () => {
     const count = parseLinks(input.value).length;
-    countEl.textContent = `${count} 条链接`;
+    countEl.textContent = t('link_count', { n: count });
     actionButtons.forEach((button) => { button.disabled = count === 0; });
   };
   input.addEventListener('input', refresh);
@@ -215,12 +233,12 @@ function parseLinks(text) {
 
 async function runLinkDownload(entries, prefix, mode, button) {
   if (!entries.length) {
-    setStatus('没有识别到有效的图片链接');
+    setStatus(t('no_valid_links'));
     return;
   }
   const label = button.textContent;
   button.disabled = true;
-  button.textContent = '处理中';
+  button.textContent = t('processing');
   try {
     const response = await chrome.runtime.sendMessage({
       target: 'image-downloader-background',
@@ -228,14 +246,14 @@ async function runLinkDownload(entries, prefix, mode, button) {
       payload: {
         mode,
         prefix: prefix || 'links',
-        site: { id: 'links', name: '链接下载' },
+        site: { id: 'links', name: t('link_download') },
         entries
       }
     });
-    if (!response?.ok) throw new Error(response?.error || '下载失败');
+    if (!response?.ok) throw new Error(response?.error || t('download_failed'));
     setStatus(historyDownloadMessage(response.result || {}));
   } catch (error) {
-    setStatus(String(error?.message || error || '下载失败'));
+    setStatus(String(error?.message || error || t('download_failed')));
   } finally {
     button.disabled = false;
     button.textContent = label;
@@ -274,16 +292,16 @@ function onTabShown(name) {
   if (name === 'links') {
     const input = document.getElementById('link-dl-input');
     const count = parseLinks(input?.value || '').length;
-    setStatus(count ? `${count} 条链接待下载` : '粘贴图片直链即可下载');
+    setStatus(count ? t('link_count_pending', { n: count }) : t('links_empty_hint'));
     window.setTimeout(() => input?.focus(), 60);
     return;
   }
   if (name === 'history') {
-    setStatus(historyItems.length ? '点任意记录可预览或重新下载' : '还没有历史记录');
+    setStatus(historyItems.length ? t('history_hint') : t('history_empty'));
     return;
   }
   if (name === 'settings') {
-    setStatus('设置即时保存并同步到网页');
+    setStatus(t('status_settings'));
   }
 }
 
@@ -304,6 +322,11 @@ function renderSettings() {
   bindCheckbox('show-hover-buttons', 'showHoverButtons');
   bindCheckbox('enable-shortcuts', 'enableShortcuts');
   renderShortcutSettings();
+  const language = document.getElementById('language-select');
+  if (language) {
+    language.value = I18n.lang;
+    language.onchange = () => saveSettings({ ...settings, language: language.value });
+  }
   const defaultMode = document.getElementById('default-download-mode');
   defaultMode.value = settings.defaultDownloadMode;
   defaultMode.onchange = () => saveSettings({ ...settings, defaultDownloadMode: defaultMode.value });
@@ -344,7 +367,7 @@ async function saveShortcut(action, value) {
   const key = normalizeShortcutKey(value);
   if (!key || !Object.prototype.hasOwnProperty.call(DEFAULT_SETTINGS.shortcuts, action)) {
     renderShortcutSettings();
-    setStatus('快捷键只支持单个字母或数字');
+    setStatus(t('sc_only_alnum'));
     return;
   }
   const duplicate = Object.entries(settings.shortcuts || {}).find(([name, existing]) => {
@@ -352,7 +375,7 @@ async function saveShortcut(action, value) {
   });
   if (duplicate) {
     renderShortcutSettings();
-    setStatus(`${formatShortcutKey(key)} 已用于${SHORTCUT_LABELS[duplicate[0]] || '其他操作'}`);
+    setStatus(t('sc_in_use', { key: formatShortcutKey(key), action: shortcutActionLabel(duplicate[0]) || t('sc_other') }));
     return;
   }
   await saveSettings({
@@ -363,7 +386,7 @@ async function saveShortcut(action, value) {
     }
   });
   renderShortcutSettings();
-  setStatus(`快捷键已更新：${SHORTCUT_LABELS[action]} ${formatShortcutKey(key)}`);
+  setStatus(t('sc_updated', { action: shortcutActionLabel(action), key: formatShortcutKey(key) }));
 }
 
 async function resetShortcuts() {
@@ -372,7 +395,7 @@ async function resetShortcuts() {
     shortcuts: { ...DEFAULT_SETTINGS.shortcuts }
   });
   renderShortcutSettings();
-  setStatus('快捷键已重置');
+  setStatus(t('sc_reset'));
 }
 
 function shortcutLabel(action) {
@@ -403,20 +426,20 @@ function renderSites() {
       <div class="site-head">
         <button class="site-toggle" type="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="${escapeHtml(settingsId)}">
           <span>
-            <span class="site-title"><span class="dot"></span>${escapeHtml(site.name)}<span class="site-badge">${escapeHtml(theme.badge)}</span></span>
+            <span class="site-title"><span class="dot"></span>${escapeHtml(siteDisplayName(site))}<span class="site-badge">${escapeHtml(siteDisplayBadge(site, theme))}</span></span>
             <small>${escapeHtml(site.host)}</small>
           </span>
-          <span class="site-toggle-state">${expanded ? '收起设置' : '展开设置'}</span>
+          <span class="site-toggle-state">${expanded ? t('collapse_settings') : t('expand_settings')}</span>
         </button>
         <label class="site-enable">
-          <input type="checkbox" ${siteSettings.enabled !== false ? 'checked' : ''} aria-label="启用或停用 ${escapeHtml(site.name)}">
+          <input type="checkbox" ${siteSettings.enabled !== false ? 'checked' : ''} aria-label="${escapeHtml(siteDisplayName(site))}">
         </label>
       </div>
       <div class="site-settings" id="${escapeHtml(settingsId)}">
         <div class="site-settings-inner">
           <label class="prefix">
-            <span>文件名前缀</span>
-            <input type="text" value="${escapeHtml(siteSettings.prefix || site.defaultPrefix)}" aria-label="${escapeHtml(site.name)} 文件名前缀">
+            <span>${t('filename_prefix')}</span>
+            <input type="text" value="${escapeHtml(siteSettings.prefix || site.defaultPrefix)}" aria-label="${escapeHtml(siteDisplayName(site))}">
           </label>
         </div>
       </div>
@@ -448,7 +471,7 @@ function setSiteCardExpanded(card, siteId, expanded) {
   const toggle = card.querySelector('.site-toggle');
   const label = card.querySelector('.site-toggle-state');
   if (toggle) toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  if (label) label.textContent = expanded ? '收起设置' : '展开设置';
+  if (label) label.textContent = expanded ? t('collapse_settings') : t('expand_settings');
 }
 
 function siteTheme(siteOrId) {
@@ -478,18 +501,18 @@ async function updateSite(siteId, patch) {
 async function refreshStatus() {
   activeTab = await getActiveTab();
   if (!activeTab?.id) {
-    setUnsupported('未找到当前标签页。请先打开一个网页。');
+    setUnsupported(t('no_tab'));
     return;
   }
 
   const response = await sendToTab('status');
   if (!response?.ok) {
-    setUnsupported('此页面不支持。请打开已启用的网站。');
+    setUnsupported(t('unsupported_page'));
     return;
   }
   currentStatus = response.result;
   updateHeader();
-  setStatus(currentStatus.enabled ? '可以选择图片' : '此网站已停用。可在“站点”中开启。');
+  setStatus(currentStatus.enabled ? t('status_can_select') : t('status_site_disabled'));
 }
 
 function updateHeader() {
@@ -497,7 +520,7 @@ function updateHeader() {
   const count = document.getElementById('selected-count');
   if (!currentStatus?.supported) {
     applyCurrentTheme(null);
-    if (current) current.textContent = '此页面不支持';
+    if (current) current.textContent = t('unsupported_short');
     if (count) {
       count.textContent = '0';
       count.hidden = true;
@@ -505,7 +528,7 @@ function updateHeader() {
     return;
   }
   applyCurrentTheme(currentStatus.site);
-  if (current) current.textContent = currentStatus.enabled ? currentStatus.site.name : `${currentStatus.site.name} 已停用`;
+  if (current) current.textContent = currentStatus.enabled ? currentStatus.site.name : t('site_disabled_suffix', { name: currentStatus.site.name });
   const nextCount = currentStatus.selectedCount || 0;
   if (count) {
     count.textContent = String(nextCount);
@@ -557,7 +580,7 @@ function renderHistoryFilter() {
   if (historyFilter !== 'all' && !counts.has(historyFilter)) historyFilter = 'all';
   const allCount = historyItems.length;
   filter.innerHTML = [
-    historyFilterButton({ id: 'all', name: '全部', theme: { accent: '#2f2f2f', rgb: '47, 47, 47', dark: '#151515' } }, allCount),
+    historyFilterButton({ id: 'all', name: t('filter_all'), theme: { accent: '#2f2f2f', rgb: '47, 47, 47', dark: '#151515' } }, allCount),
     ...availableSites.map((site) => historyFilterButton(site, counts.get(site.id) || 0))
   ].join('');
   filter.querySelectorAll('[data-history-filter]').forEach((button) => {
@@ -572,6 +595,7 @@ function renderHistoryFilter() {
 function historyFilterButton(site, count) {
   const theme = siteTheme(site);
   const active = historyFilter === site.id;
+  const label = site.id === 'all' ? site.name : siteDisplayName(site);
   return `
     <button
       type="button"
@@ -579,7 +603,7 @@ function historyFilterButton(site, count) {
       data-history-filter="${escapeHtml(site.id)}"
       style="--history-accent: ${escapeHtml(theme.accent)}; --history-rgb: ${escapeHtml(theme.rgb)}; --history-dark: ${escapeHtml(theme.dark)};"
     >
-      <span>${escapeHtml(site.name)}</span>
+      <span>${escapeHtml(label)}</span>
       <em>${Number(count) || 0}</em>
     </button>
   `;
@@ -595,18 +619,19 @@ function renderHistory() {
   if (!list) return;
   const items = filteredHistoryItems();
   if (!items.length) {
-    list.innerHTML = `<div class="empty-state">${historyItems.length ? '这个平台还没有历史记录' : '还没有历史记录'}</div>`;
+    list.innerHTML = `<div class="empty-state">${historyItems.length ? t('history_empty_filtered') : t('history_empty')}</div>`;
     return;
   }
   list.innerHTML = items.map((item) => {
     const site = siteForHistory(item);
     const theme = siteTheme(site);
+    const entryCount = historyEntries(item).length;
     return `
     <button type="button" class="history-item" data-history-id="${escapeHtml(item.id || '')}" style="--history-accent: ${escapeHtml(theme.accent)}; --history-rgb: ${escapeHtml(theme.rgb)}; --history-dark: ${escapeHtml(theme.dark)};">
       <div class="history-main">
         <span class="history-type">${escapeHtml(historyTypeLabel(item))}</span>
-        <strong>${escapeHtml(item.siteName || '图片')}</strong>
-        <small>${escapeHtml(formatHistoryMeta(item))}${historyEntries(item).length ? ` · ${historyEntries(item).length} 条链接` : ''}</small>
+        <strong>${escapeHtml(site ? siteDisplayName(site) : (item.siteName || t('images_word')))}</strong>
+        <small>${escapeHtml(formatHistoryMeta(item))}${entryCount ? ` · ${t('n_links', { n: entryCount })}` : ''}</small>
       </div>
       <div class="history-count">${Number(item.count) || 0}</div>
     </button>
@@ -625,20 +650,20 @@ function showHistoryModal(item) {
   const theme = siteTheme(site);
   const entries = historyEntries(item);
   const modal = showPanelModal({
-    eyebrow: site?.name || item.siteName || '历史记录',
+    eyebrow: site ? siteDisplayName(site) : (item.siteName || t('history_record')),
     title: historyTypeLabel(item),
-    description: `${Number(item.count) || entries.length || 0} 张 · ${formatHistoryMeta(item) || '刚刚'}`,
+    description: `${t('n_images', { n: Number(item.count) || entries.length || 0 })} · ${formatHistoryMeta(item) || t('just_now')}`,
     body: `
       <div class="history-modal-shell" style="--history-accent: ${escapeHtml(theme.accent)}; --history-rgb: ${escapeHtml(theme.rgb)}; --history-dark: ${escapeHtml(theme.dark)};">
         <div class="history-modal-meta">
           <span>${escapeHtml(item.prefix || site?.defaultPrefix || 'images')}</span>
-          <strong>${escapeHtml(item.siteName || site?.name || '图片')}</strong>
+          <strong>${escapeHtml(site ? siteDisplayName(site) : (item.siteName || t('images_word')))}</strong>
         </div>
         ${renderHistoryPreview(item)}
         <div class="history-download-actions">
-          <button type="button" data-history-download="links" ${entries.length ? '' : 'disabled'}>链接文本</button>
-          <button type="button" data-history-download="direct" ${entries.length ? '' : 'disabled'}>逐张下载</button>
-          <button type="button" class="history-download-primary" data-history-download="zip" ${entries.length ? '' : 'disabled'}>重新打包</button>
+          <button type="button" data-history-download="links" ${entries.length ? '' : 'disabled'}>${t('btn_links_text')}</button>
+          <button type="button" data-history-download="direct" ${entries.length ? '' : 'disabled'}>${t('btn_direct')}</button>
+          <button type="button" class="history-download-primary" data-history-download="zip" ${entries.length ? '' : 'disabled'}>${t('btn_repack')}</button>
         </div>
       </div>
     `
@@ -672,18 +697,18 @@ function historyEntries(item) {
 function renderHistoryPreview(item) {
   const entries = historyEntries(item);
   if (!entries.length) {
-    return '<div class="history-preview-empty">这条旧记录没有保存图片链接，无法预览或重新下载。</div>';
+    return `<div class="history-preview-empty">${escapeHtml(t('history_preview_empty'))}</div>`;
   }
   // Grid is filled progressively (see setupHistoryPreviewGrid) so large records
   // stay light: thumbnails load in batches as the user scrolls.
-  return '<div class="history-preview" data-history-grid aria-label="历史图片预览"></div>';
+  return `<div class="history-preview" data-history-grid aria-label="${escapeHtml(t('preview_grid_label'))}"></div>`;
 }
 
 function historyPreviewCard(entry, index) {
   // src is resolved later (resolveThumb): cached bytes first, network URL as fallback.
   return `
     <a class="history-preview-card" href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer" title="${escapeHtml(entry.url)}">
-      <img data-url="${escapeHtml(entry.url)}" alt="历史图片 ${index + 1}" loading="lazy">
+      <img data-url="${escapeHtml(entry.url)}" alt="${escapeHtml(t('history_image'))} ${index + 1}" loading="lazy">
       <span>${String(index + 1).padStart(2, '0')}</span>
     </a>
   `;
@@ -760,13 +785,13 @@ function setupHistoryPreviewGrid(grid, entries) {
 async function downloadHistoryItem(item, mode, button) {
   const entries = historyEntries(item);
   if (!entries.length) {
-    setStatus('这条历史没有可下载链接');
+    setStatus(t('history_no_links'));
     return;
   }
   const site = siteForHistory(item);
   const label = button.textContent;
   button.disabled = true;
-  button.textContent = '处理中';
+  button.textContent = t('processing');
   try {
     const response = await chrome.runtime.sendMessage({
       target: 'image-downloader-background',
@@ -776,16 +801,16 @@ async function downloadHistoryItem(item, mode, button) {
         prefix: item.prefix || site?.defaultPrefix || 'images',
         site: {
           id: site?.id || item.siteId || 'history',
-          name: site?.name || item.siteName || '历史图片'
+          name: site ? siteDisplayName(site) : (item.siteName || t('history_image'))
         },
         entries
       }
     });
-    if (!response?.ok) throw new Error(response?.error || '下载失败');
+    if (!response?.ok) throw new Error(response?.error || t('download_failed'));
     const result = response.result || {};
     setStatus(historyDownloadMessage(result));
   } catch (error) {
-    setStatus(String(error?.message || error || '下载失败'));
+    setStatus(String(error?.message || error || t('download_failed')));
   } finally {
     button.disabled = false;
     button.textContent = label;
@@ -795,9 +820,9 @@ async function downloadHistoryItem(item, mode, button) {
 function historyDownloadMessage(result) {
   const count = Number(result.count) || 0;
   const failed = Number(result.failed) || 0;
-  if (result.mode === 'zip') return failed ? `历史 ZIP 已保存 ${count} 张，失败 ${failed} 张` : `历史 ZIP 已保存 ${count} 张`;
-  if (result.mode === 'direct') return failed ? `历史图片已下载 ${count} 张，失败 ${failed} 张` : `历史图片已下载 ${count} 张`;
-  return `历史链接已保存 ${count} 条`;
+  if (result.mode === 'zip') return failed ? t('res_zip_failed', { count, failed }) : t('res_zip', { count });
+  if (result.mode === 'direct') return failed ? t('res_direct_failed', { count, failed }) : t('res_direct', { count });
+  return t('res_links', { count });
 }
 
 function siteForHistory(item) {
@@ -812,17 +837,18 @@ function siteForHistory(item) {
 function showDonationModal(type) {
   const option = DONATION_OPTIONS[type];
   if (!option) return;
+  const label = t(option.key);
   const modal = showPanelModal({
-    eyebrow: '打赏作者',
-    title: option.label,
-    description: option.detail,
+    eyebrow: t('support_title'),
+    title: label,
+    description: t('donate_detail', { label }),
     body: `
       <figure class="panel-modal-qr">
         <div class="panel-modal-qr-frame">
-          <img src="${escapeHtml(option.src)}" alt="${escapeHtml(option.label)}打赏二维码" width="260" height="260">
+          <img src="${escapeHtml(option.src)}" alt="${escapeHtml(label)}" width="260" height="260">
           <span class="panel-modal-qr-missing">${escapeHtml(option.missing)}</span>
         </div>
-        <figcaption>请使用 ${escapeHtml(option.label)} 扫码</figcaption>
+        <figcaption>${escapeHtml(t('qr_caption', { label }))}</figcaption>
       </figure>
     `
   });
@@ -837,7 +863,7 @@ function showPanelModal({ eyebrow = '', title, description = '', body = '' }) {
   modal.className = 'panel-modal-backdrop';
   modal.innerHTML = `
     <section class="panel-modal" role="dialog" aria-modal="true" aria-labelledby="panel-modal-title">
-      <button type="button" class="panel-modal-close" data-modal-close aria-label="关闭弹窗">×</button>
+      <button type="button" class="panel-modal-close" data-modal-close aria-label="${escapeHtml(t('close_dialog'))}">×</button>
       <div class="panel-modal-copy">
         ${eyebrow ? `<span class="section-kicker panel-modal-kicker">${escapeHtml(eyebrow)}</span>` : ''}
         <h3 id="panel-modal-title">${escapeHtml(title)}</h3>
@@ -845,7 +871,7 @@ function showPanelModal({ eyebrow = '', title, description = '', body = '' }) {
       </div>
       <div class="panel-modal-body">${body}</div>
       <div class="panel-modal-actions">
-        <button type="button" class="panel-modal-secondary" data-modal-close>关闭</button>
+        <button type="button" class="panel-modal-secondary" data-modal-close>${escapeHtml(t('close'))}</button>
       </div>
     </section>
   `;
@@ -889,22 +915,22 @@ function closePanelModal(modal = activeModal) {
 }
 
 function historyTypeLabel(item) {
-  if (item.type === 'copy') return '复制';
-  if (item.mode === 'zip') return 'ZIP';
-  if (item.mode === 'direct') return '逐张';
-  if (item.mode === 'links') return '链接';
-  return '下载';
+  if (item.type === 'copy') return t('type_copy');
+  if (item.mode === 'zip') return t('type_zip');
+  if (item.mode === 'direct') return t('type_direct');
+  if (item.mode === 'links') return t('type_links');
+  return t('type_download');
 }
 
 function formatHistoryMeta(item) {
   const failed = Number(item.failed) || 0;
-  const time = item.createdAt ? new Date(item.createdAt).toLocaleString('zh-CN', {
+  const time = item.createdAt ? new Date(item.createdAt).toLocaleString(I18n.lang === 'en' ? 'en-US' : 'zh-CN', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit'
   }) : '';
-  const suffix = failed ? `，失败 ${failed}` : '';
+  const suffix = failed ? t('failed_suffix', { failed }) : '';
   return `${time}${suffix}`;
 }
 
@@ -914,7 +940,7 @@ async function refreshCurrentTabSettings() {
 }
 
 async function sendToTab(type, payload = {}) {
-  if (!activeTab?.id) return { ok: false, error: '未找到当前标签页。请先打开一个网页。' };
+  if (!activeTab?.id) return { ok: false, error: t('no_tab') };
   try {
     return await chrome.tabs.sendMessage(activeTab.id, {
       target: 'image-downloader-content',
@@ -924,9 +950,9 @@ async function sendToTab(type, payload = {}) {
   } catch (error) {
     const message = String(error?.message || error);
     if (/receiving end|Could not establish connection|No tab with id/i.test(message)) {
-      return { ok: false, error: '此页面还不能使用。请刷新页面，或打开支持的网站。' };
+      return { ok: false, error: t('tab_not_ready') };
     }
-    return { ok: false, error: message || '操作失败，请重试。' };
+    return { ok: false, error: message || t('op_failed') };
   }
 }
 
@@ -951,6 +977,7 @@ function normalizeSettings(value) {
   const next = {
     ...DEFAULT_SETTINGS,
     ...source,
+    language: source.language === 'en' ? 'en' : 'zh',
     shortcuts: normalizeShortcuts(source.shortcuts),
     sites: {
       ...DEFAULT_SETTINGS.sites,

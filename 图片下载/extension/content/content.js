@@ -4,11 +4,14 @@
   const bridge = window.ImageDownloaderAdapters;
   const adapter = bridge?.currentAdapter();
   const allAdapters = bridge?.adapters || [];
+  const I18n = window.ImageDownloaderI18n;
+  const t = (key, vars) => I18n.t(key, vars);
   const DEFAULT_SETTINGS = {
     showMiniPanel: true,
     miniPanelCollapsed: false,
     showHoverButtons: true,
     enableShortcuts: true,
+    language: 'zh',
     defaultDownloadMode: 'zip',
     shortcuts: {
       select: 'a',
@@ -25,9 +28,9 @@
   const HISTORY_KEY = 'downloadHistory';
   const HISTORY_LIMIT = 50;
   const DOWNLOAD_MODES = [
-    { mode: 'links', shortcut: 'downloadLinks', title: '链接列表', detail: '保存全部原图 URL 到 .txt' },
-    { mode: 'direct', shortcut: 'downloadDirect', title: '逐张下载', detail: '直接保存到本地' },
-    { mode: 'zip', shortcut: 'downloadZip', title: 'ZIP 压缩包', detail: '抓取图片打包下载' }
+    { mode: 'links', shortcut: 'downloadLinks', titleKey: 'mode_links_title', detailKey: 'mode_links_detail' },
+    { mode: 'direct', shortcut: 'downloadDirect', titleKey: 'mode_direct_title', detailKey: 'mode_direct_detail' },
+    { mode: 'zip', shortcut: 'downloadZip', titleKey: 'mode_zip_title', detailKey: 'mode_zip_detail' }
   ];
 
   if (!adapter) return;
@@ -81,6 +84,7 @@
 
   async function init() {
     state.settings = await loadSettings();
+    I18n.setLang(state.settings.language);
     state.enabled = siteSettings().enabled !== false;
     await loadSelected();
     applyTheme();
@@ -173,7 +177,7 @@
 
   async function handleCommand(type, payload) {
     if (type === 'status') return status();
-    if (!state.enabled && type !== 'refresh-settings') throw new Error('此网站已停用。请在侧边栏开启。');
+    if (!state.enabled && type !== 'refresh-settings') throw new Error(t('site_disabled_panel'));
     if (type === 'select-visible') return selectPointedImage();
     if (type === 'clear') return clearSelected();
     if (type === 'links') return { links: selectedEntries().map((entry) => entry.url) };
@@ -187,7 +191,7 @@
       await setMiniPanelCollapsed(Boolean(payload.collapsed));
       return status();
     }
-    throw new Error(`无法执行此操作：${type}`);
+    throw new Error(t('cmd_unknown', { type }));
   }
 
   function setupStorageListener() {
@@ -227,9 +231,15 @@
   async function applySettingsChange() {
     const wasEnabled = state.enabled;
     state.enabled = siteSettings().enabled !== false;
+    I18n.setLang(state.settings.language);
     document.documentElement.classList.toggle('idx-hover-enabled', state.settings.showHoverButtons !== false);
     if (state.enabled && !wasEnabled) enable();
     if (!state.enabled && wasEnabled) disable();
+    // Rebuild the toolbar when the language changed so its static labels relocalize.
+    const panel = document.getElementById('idx-mini-panel');
+    if (panel && panel.dataset.lang !== I18n.lang) {
+      panel.remove();
+    }
     updateMiniPanel();
     scheduleScan();
   }
@@ -290,7 +300,7 @@
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'idx-select-btn';
-    button.title = '选择这张图片';
+    button.title = t('select_this');
     button._idxImage = img;
     const blockHostEvent = (event) => {
       event.stopPropagation();
@@ -386,23 +396,23 @@
   function selectPointedImage() {
     const img = imageAtPointer();
     if (!img) {
-      toast('请把鼠标移到图片上');
+      toast(t('toast_hover'));
       return status({ added: 0 });
     }
     if (!setupImage(img)) {
-      toast('当前图片不可选择');
+      toast(t('toast_cant_select'));
       return status({ added: 0 });
     }
     const result = toggleImage(img);
     if (result === 'added') {
-      toast('已选择 1 张图片');
+      toast(t('toast_selected_one'));
       return status({ added: 1 });
     }
     if (result === 'removed') {
-      toast('已取消选择');
+      toast(t('toast_deselected'));
       return status({ removed: 1 });
     }
-    toast('当前图片不可选择');
+    toast(t('toast_cant_select'));
     return status({ added: 0 });
   }
 
@@ -414,13 +424,13 @@
     updateMiniPanel();
     pulseMiniCount();
     syncRuntime();
-    if (!options.silent) toast('已清空选择');
+    if (!options.silent) toast(t('toast_cleared'));
     return status({ cleared: count });
   }
 
   async function downloadSelected(mode = state.settings.defaultDownloadMode) {
-    if (!state.selected.size) throw new Error('还没有选择图片。请先在页面上选择图片。');
-    if (state.busy) throw new Error('正在下载，请稍后再试。');
+    if (!state.selected.size) throw new Error(t('toast_none_selected'));
+    if (state.busy) throw new Error(t('toast_busy'));
     state.busy = true;
     state.downloadProgress = {
       mode,
@@ -438,7 +448,7 @@
         payload: {
           mode,
           prefix: siteSettings().prefix || adapter.defaultPrefix,
-          site: { id: adapter.id, name: adapter.name },
+          site: { id: adapter.id, name: I18n.siteName(adapter.id, adapter.name) },
           entries: selectedEntries()
         }
       });
@@ -448,8 +458,8 @@
       updateMiniPanel();
     }
     if (!response?.ok) {
-      toast(response?.error || '下载失败，请重试');
-      throw new Error(response?.error || '下载失败，请重试');
+      toast(response?.error || t('download_failed_retry'));
+      throw new Error(response?.error || t('download_failed_retry'));
     }
     const result = response.result || {};
     if (result.count) await clearSelected({ silent: true });
@@ -476,11 +486,11 @@
 
   function downloadPhaseMessage(phase, mode) {
     if (mode === 'zip') {
-      if (phase === 'fetching') return '正在抓取图片，请稍候…';
-      if (phase === 'packing') return '图片抓取完成，正在打包 ZIP…';
-      if (phase === 'saving') return '打包完成，正在保存到下载…';
+      if (phase === 'fetching') return t('phase_fetching');
+      if (phase === 'packing') return t('phase_packing');
+      if (phase === 'saving') return t('phase_saving');
     }
-    if (mode === 'direct' && phase === 'active') return '正在逐张下载，请稍候…';
+    if (mode === 'direct' && phase === 'active') return t('phase_direct');
     return '';
   }
 
@@ -492,13 +502,13 @@
     const count = Number(result.count) || 0;
     const failed = Number(result.failed) || 0;
     if (result.mode === 'zip') {
-      return failed ? `ZIP 已保存 ${count} 张，失败 ${failed} 张` : `ZIP 已保存 ${count} 张`;
+      return failed ? t('res_zip_failed', { count, failed }) : t('res_zip', { count });
     }
     if (result.mode === 'direct') {
-      return failed ? `已下载 ${count} 张，失败 ${failed} 张` : `已下载 ${count} 张`;
+      return failed ? t('res_direct_failed', { count, failed }) : t('res_direct', { count });
     }
-    if (result.mode === 'links') return `链接已保存 ${count} 条`;
-    return failed ? `已处理 ${count} 张，失败 ${failed} 张` : `已处理 ${count} 张`;
+    if (result.mode === 'links') return t('res_links', { count });
+    return failed ? t('res_generic_failed', { count, failed }) : t('res_generic', { count });
   }
 
   function createMiniPanel() {
@@ -506,21 +516,22 @@
     const panel = document.createElement('div');
     panel.id = 'idx-mini-panel';
     panel.dataset.site = adapter.id;
+    panel.dataset.lang = I18n.lang;
     panel.innerHTML = `
-      <div class="idx-site-pill">${escapeHtml(siteTheme().badge || adapter.name)}</div>
+      <div class="idx-site-pill">${escapeHtml(localSiteBadge())}</div>
       <div class="idx-count">0</div>
       <div class="idx-status" role="status" aria-live="polite"></div>
       <div class="idx-actions">
-        <button type="button" class="idx-secondary" data-action="select">选图<kbd data-shortcut="select">A</kbd></button>
-        <button type="button" data-action="clear">清空</button>
-        <button type="button" data-action="links">链接</button>
-        <button type="button" data-action="prefix">前缀</button>
-        <button type="button" class="idx-primary" data-action="download">下载<kbd data-shortcut="download">D</kbd></button>
-        <button type="button" class="idx-dark" data-action="new-batch">新批次<kbd data-shortcut="newBatch">N</kbd></button>
+        <button type="button" class="idx-secondary" data-action="select">${escapeHtml(t('mp_select'))}<kbd data-shortcut="select">A</kbd></button>
+        <button type="button" data-action="clear">${escapeHtml(t('mp_clear'))}</button>
+        <button type="button" data-action="links">${escapeHtml(t('mp_links'))}</button>
+        <button type="button" data-action="prefix">${escapeHtml(t('mp_prefix'))}</button>
+        <button type="button" class="idx-primary" data-action="download">${escapeHtml(t('mp_download'))}<kbd data-shortcut="download">D</kbd></button>
+        <button type="button" class="idx-dark" data-action="new-batch">${escapeHtml(t('mp_newbatch'))}<kbd data-shortcut="newBatch">N</kbd></button>
       </div>
-      <button type="button" class="idx-fold" data-action="fold" aria-label="收起网页快捷栏" aria-expanded="true" title="收起">
+      <button type="button" class="idx-fold" data-action="fold" aria-label="${escapeHtml(t('mp_fold_aria'))}" aria-expanded="true" title="${escapeHtml(t('mp_fold'))}">
         <span class="idx-fold-icon">›</span>
-        <span class="idx-fold-label">收起</span>
+        <span class="idx-fold-label">${escapeHtml(t('mp_fold'))}</span>
       </button>
     `;
     panel.addEventListener('click', (event) => {
@@ -563,11 +574,11 @@
     panel.classList.toggle('idx-busy', state.busy);
     panel.dataset.site = adapter.id;
     panel.setAttribute('role', collapsed ? 'button' : 'toolbar');
-    panel.setAttribute('aria-label', collapsed ? `已选择 ${state.selected.size} 张图片，点击展开网页快捷栏` : '网页图片选择快捷栏');
+    panel.setAttribute('aria-label', collapsed ? t('mp_collapsed_aria', { n: state.selected.size }) : t('mp_toolbar_aria'));
     panel.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     panel.tabIndex = collapsed ? 0 : -1;
     syncMiniPanelCollapsedAccessibility(panel, collapsed);
-    panel.querySelector('.idx-site-pill').textContent = siteTheme().badge || adapter.name;
+    panel.querySelector('.idx-site-pill').textContent = localSiteBadge();
     const count = panel.querySelector('.idx-count');
     count.textContent = miniPanelCountText();
     count.dataset.progressLabel = miniPanelProgressLabel();
@@ -582,11 +593,11 @@
     panel.querySelector('[data-action="new-batch"]').disabled = state.selected.size === 0 || state.busy;
     const fold = panel.querySelector('[data-action="fold"]');
     if (fold) {
-      fold.title = collapsed ? '展开' : '收起';
-      fold.setAttribute('aria-label', collapsed ? '展开网页快捷栏' : '收起网页快捷栏');
+      fold.title = collapsed ? t('mp_expand') : t('mp_fold');
+      fold.setAttribute('aria-label', collapsed ? t('mp_expand_aria') : t('mp_fold_aria'));
       fold.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       const label = fold.querySelector('.idx-fold-label');
-      if (label) label.textContent = collapsed ? '展开' : '收起';
+      if (label) label.textContent = collapsed ? t('mp_expand') : t('mp_fold');
     }
     panel.dataset.dockReady = 'true';
     if (shouldAnimateDock) playMiniPanelDockAnimation(panel, dockBeforeRect, collapsed);
@@ -691,11 +702,11 @@
 
   function miniPanelProgressLabel() {
     if (!state.busy || !state.downloadProgress) return '';
-    if (state.downloadProgress.phase === 'fetching') return '抓取';
-    if (state.downloadProgress.phase === 'packing') return '打包';
-    if (state.downloadProgress.phase === 'saving') return '保存';
-    if (state.downloadProgress.mode === 'direct') return '下载';
-    return '处理';
+    if (state.downloadProgress.phase === 'fetching') return t('prog_fetch');
+    if (state.downloadProgress.phase === 'packing') return t('prog_pack');
+    if (state.downloadProgress.phase === 'saving') return t('prog_save');
+    if (state.downloadProgress.mode === 'direct') return t('prog_download');
+    return t('prog_process');
   }
 
   // Human-readable line shown next to the ring while downloading, so users know
@@ -703,16 +714,16 @@
   function miniPanelStatusText() {
     if (!state.busy || !state.downloadProgress) return '';
     const p = state.downloadProgress;
-    if (p.phase === 'fetching') return `正在抓取图片 ${p.done}/${p.total}`;
-    if (p.phase === 'packing') return '正在打包 ZIP…';
-    if (p.phase === 'saving') return '正在保存文件…';
-    if (p.phase === 'done') return '即将完成…';
-    if (p.mode === 'direct') return `正在逐张下载 ${p.done}/${p.total}`;
-    return '正在处理…';
+    if (p.phase === 'fetching') return t('prog_fetching_n', { done: p.done, total: p.total });
+    if (p.phase === 'packing') return t('prog_packing');
+    if (p.phase === 'saving') return t('prog_saving');
+    if (p.phase === 'done') return t('prog_done');
+    if (p.mode === 'direct') return t('prog_direct_n', { done: p.done, total: p.total });
+    return t('prog_processing');
   }
 
   function miniPanelProgressTitle() {
-    if (!state.busy || !state.downloadProgress) return `${state.selected.size} 张已选图片`;
+    if (!state.busy || !state.downloadProgress) return t('selected_n_images', { n: state.selected.size });
     return miniPanelStatusText();
   }
 
@@ -818,8 +829,8 @@
   function showDownloadModal(isNewBatch) {
     if (!state.selected.size || state.busy) return;
     const modal = showModal(`
-      <h3>下载方式</h3>
-      <p>共 ${state.selected.size} 张图片</p>
+      <h3>${escapeHtml(t('dl_method'))}</h3>
+      <p>${escapeHtml(t('dl_total', { n: state.selected.size }))}</p>
       <div class="idx-dl-list">
         ${DOWNLOAD_MODES.map((item) => downloadModeButton(item)).join('')}
       </div>
@@ -847,10 +858,10 @@
     return `
       <button type="button" class="idx-dl-item" data-mode="${escapeHtml(item.mode)}">
         <span class="idx-dl-title">
-          <span>${escapeHtml(item.title)}</span>
+          <span>${escapeHtml(t(item.titleKey))}</span>
           <kbd data-shortcut="${escapeHtml(item.shortcut)}">${escapeHtml(shortcutLabel(item.shortcut))}</kbd>
         </span>
-        <small>${escapeHtml(item.detail)}</small>
+        <small>${escapeHtml(t(item.detailKey))}</small>
       </button>
     `;
   }
@@ -864,20 +875,20 @@
   function showPrefixModal(callback) {
     const currentPrefix = siteSettings().prefix || adapter.defaultPrefix;
     const modal = showModal(`
-      <h3>下载前缀</h3>
-      <p>文件名使用此前缀区分不同站点和批次</p>
+      <h3>${escapeHtml(t('dl_prefix_title'))}</h3>
+      <p>${escapeHtml(t('dl_prefix_desc'))}</p>
       <input id="idx-prefix-input" value="${escapeHtml(currentPrefix)}">
     `);
     const input = modal.querySelector('#idx-prefix-input');
     const ok = document.createElement('button');
     ok.type = 'button';
     ok.className = 'idx-modal-ok';
-    ok.textContent = '确认';
+    ok.textContent = t('confirm');
     ok.addEventListener('click', async () => {
       const nextPrefix = input.value.trim() || adapter.defaultPrefix;
       await saveSitePrefix(nextPrefix);
       closeModal(modal);
-      toast('前缀已更新');
+      toast(t('toast_prefix_updated'));
       if (callback) callback();
     });
     modal.querySelector('.idx-modal-foot').appendChild(ok);
@@ -906,7 +917,7 @@
   async function copySelectedLinks() {
     const links = selectedEntries().map((entry) => entry.url);
     if (!links.length) {
-      toast('还没有选择图片');
+      toast(t('toast_no_selection'));
       return;
     }
     const body = links.join('\n');
@@ -916,7 +927,7 @@
       await addHistory({
         type: 'copy',
         siteId: adapter.id,
-        siteName: adapter.name,
+        siteName: I18n.siteName(adapter.id, adapter.name),
         prefix: siteSettings().prefix || adapter.defaultPrefix,
         mode: 'links',
         count: links.length,
@@ -924,7 +935,7 @@
         entries
       });
       requestCacheEntries(entries); // silently keep bytes so copied links survive expiry
-      toast(`已复制 ${links.length} 个链接`);
+      toast(t('toast_copied', { n: links.length }));
     } catch (_) {
       showLinksModal(body);
     }
@@ -932,18 +943,18 @@
 
   function showLinksModal(body) {
     const modal = showModal(`
-      <h3>图片链接</h3>
-      <p>复制下面的链接，或保存为链接文本</p>
+      <h3>${escapeHtml(t('image_links'))}</h3>
+      <p>${escapeHtml(t('image_links_desc'))}</p>
       <textarea readonly>${escapeHtml(body)}</textarea>
     `);
     const copy = document.createElement('button');
     copy.type = 'button';
     copy.className = 'idx-modal-ok';
-    copy.textContent = '复制';
+    copy.textContent = t('copy');
     copy.addEventListener('click', async () => {
       await navigator.clipboard.writeText(body).catch(() => {});
       closeModal(modal);
-      toast('链接已复制');
+      toast(t('toast_links_copied'));
     });
     modal.querySelector('.idx-modal-foot').appendChild(copy);
     const textarea = modal.querySelector('textarea');
@@ -958,7 +969,7 @@
       <div class="idx-modal-card">
         ${html}
         <div class="idx-modal-foot">
-          <button type="button" class="idx-modal-cancel">取消</button>
+          <button type="button" class="idx-modal-cancel">${escapeHtml(t('cancel'))}</button>
         </div>
       </div>
     `;
@@ -1057,6 +1068,7 @@
     const merged = {
       ...DEFAULT_SETTINGS,
       ...source,
+      language: source.language === 'en' ? 'en' : 'zh',
       shortcuts: normalizeShortcuts(source.shortcuts),
       sites: {
         ...DEFAULT_SETTINGS.sites,
@@ -1168,6 +1180,11 @@
       badge: adapter.name,
       ...(adapter.theme || {})
     };
+  }
+
+  // Localized short badge for the on-page toolbar pill.
+  function localSiteBadge() {
+    return I18n.siteBadge(adapter.id, siteTheme().badge || adapter.name);
   }
 
   let toastTimer = 0;

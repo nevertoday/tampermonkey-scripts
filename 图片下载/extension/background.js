@@ -1,4 +1,12 @@
-importScripts('lib/image-cache.js');
+importScripts('lib/image-cache.js', 'lib/i18n.js');
+
+const I18n = self.ImageDownloaderI18n;
+const t = (key, vars) => I18n.t(key, vars);
+// Keep the worker's language in sync with the saved setting.
+chrome.storage.sync.get('settings').then((stored) => I18n.setLang(stored?.settings?.language)).catch(() => {});
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.settings) I18n.setLang(changes.settings.newValue?.language);
+});
 
 const DEFAULT_CONCURRENCY = 4;
 const HISTORY_KEY = 'downloadHistory';
@@ -70,7 +78,7 @@ async function cacheEntries(entries) {
 
 async function handleDownload(payload, sender = {}) {
   const entries = Array.isArray(payload.entries) ? payload.entries : [];
-  if (!entries.length) throw new Error('还没有选择图片。请先在页面上选择图片。');
+  if (!entries.length) throw new Error(t('toast_none_selected'));
 
   const mode = payload.mode || 'zip';
   const progress = downloadProgressReporter(sender, mode, entries.length);
@@ -140,7 +148,7 @@ async function handleDownload(payload, sender = {}) {
     }
   });
 
-  if (!files.length) throw new Error('没有抓取到图片。可以改用“保存链接文本”。');
+  if (!files.length) throw new Error(t('zip_empty'));
   await progress({ phase: 'packing', done: 0, total: files.length });
   const zip = await makeZip(files, async (done) => {
     await progress({ phase: 'packing', done, total: files.length });
@@ -188,7 +196,7 @@ async function addHistory(payload, result) {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     type: 'download',
     siteId: payload.site?.id || payload.siteId || '',
-    siteName: payload.site?.name || payload.siteName || payload.prefix || '图片',
+    siteName: payload.site?.name || payload.siteName || payload.prefix || t('images_word'),
     prefix: payload.prefix || 'images',
     mode: result.mode,
     count: result.count || 0,
@@ -229,7 +237,7 @@ async function downloadBlob(blob, filename) {
   const safeFilename = sanitizeFilename(filename);
   const key = `${TRANSIENT_DOWNLOAD_PREFIX}${token}`;
   const stored = await ImageCache.put(key, blob, { skipEvict: true });
-  if (!stored) throw new Error('无法准备下载文件。请重试。');
+  if (!stored) throw new Error(t('download_prepare_failed'));
   await chrome.tabs.create({
     url: chrome.runtime.getURL(`download/download.html?token=${encodeURIComponent(token)}&filename=${encodeURIComponent(safeFilename)}`),
     active: false

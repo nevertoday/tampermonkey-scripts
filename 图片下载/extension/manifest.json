@@ -96,6 +96,7 @@
         "https://instagram.com/*"
       ],
       "js": [
+        "lib/i18n.js",
         "content/site-adapters.js",
         "content/content.js"
       ],

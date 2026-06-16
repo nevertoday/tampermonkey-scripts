@@ -9,29 +9,29 @@
   <body>
     <main class="app">
       <nav class="tabs" aria-label="主导航">
-        <button class="tab active" data-tab="sites" type="button">站点</button>
-        <button class="tab" data-tab="links" type="button">链接</button>
-        <button class="tab" data-tab="history" type="button">历史</button>
-        <button class="tab" data-tab="settings" type="button">设置</button>
+        <button class="tab active" data-tab="sites" type="button" data-i18n="tab_sites">站点</button>
+        <button class="tab" data-tab="links" type="button" data-i18n="tab_links">链接</button>
+        <button class="tab" data-tab="history" type="button" data-i18n="tab_history">历史</button>
+        <button class="tab" data-tab="settings" type="button" data-i18n="tab_settings">设置</button>
       </nav>
 
       <section class="panel active" id="tab-sites">
-        <p class="panel-lead">悬停图片即可拾取，批量下载原图</p>
+        <p class="panel-lead" data-i18n="lead_sites">悬停图片即可拾取，批量下载原图</p>
         <div class="site-list" id="site-list"></div>
       </section>
 
       <section class="panel" id="tab-links">
-        <p class="panel-lead">粘贴图片直链，无需打开网页</p>
+        <p class="panel-lead" data-i18n="lead_links">粘贴图片直链，无需打开网页</p>
         <div class="link-dl" style="--history-accent: var(--accent); --history-rgb: var(--accent-rgb); --history-dark: var(--accent-hover);">
-          <textarea id="link-dl-input" spellcheck="false" placeholder="每行一个图片直链&#10;https://example.com/a.jpg&#10;https://example.com/b.png&#10;https://example.com/c.webp"></textarea>
+          <textarea id="link-dl-input" spellcheck="false" data-i18n-ph="links_placeholder" placeholder="每行一个图片直链&#10;https://example.com/a.jpg&#10;https://example.com/b.png&#10;https://example.com/c.webp"></textarea>
           <div class="link-dl-row">
-            <label class="link-dl-prefix"><span>前缀</span><input id="link-dl-prefix" type="text" value="links" aria-label="文件名前缀"></label>
+            <label class="link-dl-prefix"><span data-i18n="prefix">前缀</span><input id="link-dl-prefix" type="text" value="links" aria-label="文件名前缀"></label>
             <span class="link-dl-count" id="link-dl-count">0 条链接</span>
           </div>
           <div class="history-download-actions">
-            <button type="button" data-link-mode="links" disabled>链接文本</button>
-            <button type="button" data-link-mode="direct" disabled>逐张下载</button>
-            <button type="button" class="history-download-primary" data-link-mode="zip" disabled>ZIP 打包</button>
+            <button type="button" data-link-mode="links" data-i18n="btn_links_text" disabled>链接文本</button>
+            <button type="button" data-link-mode="direct" data-i18n="btn_direct" disabled>逐张下载</button>
+            <button type="button" class="history-download-primary" data-link-mode="zip" data-i18n="btn_zip" disabled>ZIP 打包</button>
           </div>
         </div>
       </section>
@@ -39,131 +39,139 @@
       <section class="panel" id="tab-history">
         <div class="history-head">
           <div>
-            <h2>历史</h2>
-            <p>最近的下载记录</p>
+            <h2 data-i18n="history_title">历史</h2>
+            <p data-i18n="history_sub">最近的下载记录</p>
           </div>
-          <button type="button" id="clear-history">清空</button>
+          <button type="button" id="clear-history" data-i18n="clear">清空</button>
         </div>
         <div class="history-filter" id="history-filter" aria-label="按平台过滤历史"></div>
         <div class="history-list" id="history-list"></div>
       </section>
 
       <section class="panel" id="tab-settings">
+        <label class="field">
+          <span data-i18n="set_language">语言</span>
+          <select id="language-select">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </select>
+        </label>
         <label class="switch-row">
           <span>
-            <strong>网页快捷栏</strong>
-            <small>右下角显示已选数量和下载按钮</small>
+            <strong data-i18n="set_minipanel">网页快捷栏</strong>
+            <small data-i18n="set_minipanel_sub">右下角显示已选数量和下载按钮</small>
           </span>
           <input type="checkbox" id="show-mini-panel">
         </label>
         <label class="switch-row">
           <span>
-            <strong>快捷栏默认收起</strong>
-            <small>只显示数量，点击再展开</small>
+            <strong data-i18n="set_collapsed">快捷栏默认收起</strong>
+            <small data-i18n="set_collapsed_sub">只显示数量，点击再展开</small>
           </span>
           <input type="checkbox" id="mini-panel-collapsed">
         </label>
         <label class="switch-row">
           <span>
-            <strong>图片选择按钮</strong>
-            <small>悬停图片时显示选择按钮</small>
+            <strong data-i18n="set_hover">图片选择按钮</strong>
+            <small data-i18n="set_hover_sub">悬停图片时显示选择按钮</small>
           </span>
           <input type="checkbox" id="show-hover-buttons">
         </label>
         <label class="switch-row">
           <span>
-            <strong>键盘快捷键</strong>
-            <small>用快捷键选图、下载</small>
+            <strong data-i18n="set_shortcuts">键盘快捷键</strong>
+            <small data-i18n="set_shortcuts_sub">用快捷键选图、下载</small>
           </span>
           <input type="checkbox" id="enable-shortcuts">
         </label>
         <section class="shortcut-card" id="shortcut-settings" aria-labelledby="shortcut-title">
           <div class="shortcut-head">
             <span>
-              <strong id="shortcut-title">快捷键</strong>
-              <small>字母或数字，保存即同步</small>
+              <strong id="shortcut-title" data-i18n="shortcuts_title">快捷键</strong>
+              <small data-i18n="shortcuts_sub">字母或数字，保存即同步</small>
             </span>
-            <button type="button" id="reset-shortcuts">重置</button>
+            <button type="button" id="reset-shortcuts" data-i18n="reset">重置</button>
           </div>
           <div class="shortcut-grid">
             <label class="shortcut-field">
-              <span>选图</span>
+              <span data-i18n="sc_select">选图</span>
               <input class="shortcut-key" data-shortcut-input="select" maxlength="1" autocomplete="off" spellcheck="false" aria-label="选图快捷键">
             </label>
             <label class="shortcut-field">
-              <span>备用选图</span>
+              <span data-i18n="sc_alt">备用选图</span>
               <input class="shortcut-key" data-shortcut-input="alternateSelect" maxlength="1" autocomplete="off" spellcheck="false" aria-label="备用选图快捷键">
             </label>
             <label class="shortcut-field">
-              <span>下载</span>
+              <span data-i18n="sc_download">下载</span>
               <input class="shortcut-key" data-shortcut-input="download" maxlength="1" autocomplete="off" spellcheck="false" aria-label="下载快捷键">
             </label>
             <label class="shortcut-field">
-              <span>新批次</span>
+              <span data-i18n="sc_newbatch">新批次</span>
               <input class="shortcut-key" data-shortcut-input="newBatch" maxlength="1" autocomplete="off" spellcheck="false" aria-label="新批次快捷键">
             </label>
             <label class="shortcut-field">
-              <span>清空</span>
+              <span data-i18n="sc_clear">清空</span>
               <input class="shortcut-key" data-shortcut-input="clear" maxlength="1" autocomplete="off" spellcheck="false" aria-label="清空快捷键">
             </label>
             <label class="shortcut-field">
-              <span>链接列表</span>
+              <span data-i18n="sc_links">链接列表</span>
               <input class="shortcut-key" data-shortcut-input="downloadLinks" maxlength="1" autocomplete="off" spellcheck="false" aria-label="链接列表下载快捷键">
             </label>
             <label class="shortcut-field">
-              <span>逐张下载</span>
+              <span data-i18n="sc_direct">逐张下载</span>
               <input class="shortcut-key" data-shortcut-input="downloadDirect" maxlength="1" autocomplete="off" spellcheck="false" aria-label="逐张下载快捷键">
             </label>
             <label class="shortcut-field">
-              <span>ZIP 压缩包</span>
+              <span data-i18n="sc_zip">ZIP 压缩包</span>
               <input class="shortcut-key" data-shortcut-input="downloadZip" maxlength="1" autocomplete="off" spellcheck="false" aria-label="ZIP 压缩包下载快捷键">
             </label>
           </div>
         </section>
         <label class="field">
-          <span>默认下载方式</span>
+          <span data-i18n="set_defaultmode">默认下载方式</span>
           <select id="default-download-mode">
-            <option value="zip">打包为 ZIP</option>
-            <option value="direct">逐张下载原图</option>
-            <option value="links">保存链接文本</option>
+            <option value="zip" data-i18n="mode_zip">打包为 ZIP</option>
+            <option value="direct" data-i18n="mode_direct">逐张下载原图</option>
+            <option value="links" data-i18n="mode_links">保存链接文本</option>
           </select>
         </label>
         <section class="author-section settings-support" aria-labelledby="author-title">
           <aside class="support-panel" aria-label="打赏作者">
             <div class="support-copy">
-              <span class="section-kicker">支持作者</span>
-              <h3 id="author-title">打赏作者</h3>
-              <p>觉得好用，扫码请作者喝杯咖啡。</p>
+              <span class="section-kicker" data-i18n="support_kicker">支持作者</span>
+              <h3 id="author-title" data-i18n="support_title">打赏作者</h3>
+              <p data-i18n="support_desc">觉得好用，扫码请作者喝杯咖啡。</p>
             </div>
             <div class="support-options">
               <button type="button" class="support-option" data-donate="wechat">
                 <span>
-                  <strong>微信</strong>
-                  <small>日常支持</small>
+                  <strong data-i18n="donate_wechat">微信</strong>
+                  <small data-i18n="donate_wechat_sub">日常支持</small>
                 </span>
-                <span class="support-mark">扫码</span>
+                <span class="support-mark" data-i18n="scan">扫码</span>
               </button>
               <button type="button" class="support-option" data-donate="alipay">
                 <span>
-                  <strong>支付宝</strong>
-                  <small>快捷打赏</small>
+                  <strong data-i18n="donate_alipay">支付宝</strong>
+                  <small data-i18n="donate_alipay_sub">快捷打赏</small>
                 </span>
-                <span class="support-mark">扫码</span>
+                <span class="support-mark" data-i18n="scan">扫码</span>
               </button>
               <button type="button" class="support-option" data-donate="compute">
                 <span>
-                  <strong>银联赞赏</strong>
-                  <small>支持持续适配</small>
+                  <strong data-i18n="donate_compute">银联赞赏</strong>
+                  <small data-i18n="donate_compute_sub">支持持续适配</small>
                 </span>
-                <span class="support-mark">扫码</span>
+                <span class="support-mark" data-i18n="scan">扫码</span>
               </button>
             </div>
           </aside>
         </section>
       </section>
 
-      <footer id="status">等待选择图片</footer>
+      <footer id="status" data-i18n="status_default">等待选择图片</footer>
     </main>
+    <script src="../lib/i18n.js"></script>
     <script src="../lib/image-cache.js"></script>
     <script src="sidepanel.js"></script>
   </body>
