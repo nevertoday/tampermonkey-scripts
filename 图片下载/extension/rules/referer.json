@@ -73,5 +73,35 @@
       "domainType": "thirdParty",
       "resourceTypes": ["image", "xmlhttprequest", "other"]
     }
+  },
+  {
+    "id": 6,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://x.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||pbs.twimg.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
+  },
+  {
+    "id": 7,
+    "priority": 1,
+    "action": {
+      "type": "modifyHeaders",
+      "requestHeaders": [
+        { "header": "referer", "operation": "set", "value": "https://dribbble.com/" }
+      ]
+    },
+    "condition": {
+      "urlFilter": "||cdn.dribbble.com",
+      "domainType": "thirdParty",
+      "resourceTypes": ["image", "xmlhttprequest", "other"]
+    }
   }
 ]

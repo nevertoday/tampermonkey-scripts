@@ -552,6 +552,13 @@
     }
     panel.hidden = state.settings.showMiniPanel === false || !state.enabled;
     const collapsed = state.settings.miniPanelCollapsed === true;
+    const wasCollapsed = panel.classList.contains('idx-collapsed');
+    const shouldAnimateDock = panel.dataset.dockReady === 'true'
+      && !panel.hidden
+      && wasCollapsed !== collapsed
+      && shouldAnimateMiniPanelDock(panel);
+    const dockBeforeRect = shouldAnimateDock ? panel.getBoundingClientRect() : null;
+    prepareMiniPanelDockAnimation(panel, shouldAnimateDock, wasCollapsed, collapsed);
     panel.classList.toggle('idx-collapsed', collapsed);
     panel.classList.toggle('idx-busy', state.busy);
     panel.dataset.site = adapter.id;
@@ -559,6 +566,7 @@
     panel.setAttribute('aria-label', collapsed ? `已选择 ${state.selected.size} 张图片，点击展开网页快捷栏` : '网页图片选择快捷栏');
     panel.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
     panel.tabIndex = collapsed ? 0 : -1;
+    syncMiniPanelCollapsedAccessibility(panel, collapsed);
     panel.querySelector('.idx-site-pill').textContent = siteTheme().badge || adapter.name;
     const count = panel.querySelector('.idx-count');
     count.textContent = miniPanelCountText();
@@ -579,6 +587,99 @@
       fold.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
       const label = fold.querySelector('.idx-fold-label');
       if (label) label.textContent = collapsed ? '展开' : '收起';
+    }
+    panel.dataset.dockReady = 'true';
+    if (shouldAnimateDock) playMiniPanelDockAnimation(panel, dockBeforeRect, collapsed);
+  }
+
+  function syncMiniPanelCollapsedAccessibility(panel, collapsed) {
+    const hiddenParts = panel.querySelectorAll('.idx-site-pill, .idx-actions, .idx-fold');
+    for (const item of hiddenParts) {
+      item.toggleAttribute('aria-hidden', collapsed);
+      if ('inert' in item) item.inert = collapsed;
+    }
+
+    const controls = panel.querySelectorAll('.idx-actions button, .idx-fold');
+    for (const button of controls) {
+      if (collapsed) {
+        button.tabIndex = -1;
+      } else {
+        button.removeAttribute('tabindex');
+      }
+    }
+  }
+
+  function shouldAnimateMiniPanelDock(panel) {
+    if (typeof panel.animate !== 'function') return false;
+    if (typeof window.matchMedia !== 'function') return true;
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function prepareMiniPanelDockAnimation(panel, shouldAnimate, wasCollapsed, collapsed) {
+    if (panel._idxExpandTimer) {
+      window.clearTimeout(panel._idxExpandTimer);
+      panel._idxExpandTimer = 0;
+    }
+    if (!shouldAnimate) {
+      panel.classList.remove('idx-expanding');
+      return;
+    }
+    if (wasCollapsed && !collapsed) {
+      panel.classList.remove('idx-expanding');
+      void panel.offsetWidth;
+      panel.classList.add('idx-expanding');
+    } else {
+      panel.classList.remove('idx-expanding');
+    }
+  }
+
+  function playMiniPanelDockAnimation(panel, beforeRect, collapsed) {
+    if (!beforeRect) return;
+    if (panel._idxDockAnimation) {
+      panel._idxDockAnimation.cancel();
+      panel._idxDockAnimation = null;
+    }
+    const afterRect = panel.getBoundingClientRect();
+    if (!beforeRect.width || !beforeRect.height || !afterRect.width || !afterRect.height) return;
+
+    const clampScale = (value) => Math.min(12, Math.max(0.06, value));
+    const scaleX = clampScale(beforeRect.width / afterRect.width);
+    const scaleY = clampScale(beforeRect.height / afterRect.height);
+    const translateX = beforeRect.right - afterRect.right;
+    const translateY = beforeRect.bottom - afterRect.bottom;
+    const hasVisualDelta = Math.abs(scaleX - 1) > 0.01
+      || Math.abs(scaleY - 1) > 0.01
+      || Math.abs(translateX) > 0.5
+      || Math.abs(translateY) > 0.5;
+
+    if (hasVisualDelta) {
+      const dockAnimation = panel.animate([
+        {
+          transform: `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`,
+          transformOrigin: 'right bottom'
+        },
+        {
+          transform: 'translate(0, 0) scale(1, 1)',
+          transformOrigin: 'right bottom'
+        }
+      ], {
+        duration: collapsed ? 240 : 320,
+        easing: collapsed ? 'cubic-bezier(0.7, 0, 0.84, 0)' : 'cubic-bezier(0.16, 1, 0.3, 1)'
+      });
+      panel._idxDockAnimation = dockAnimation;
+      dockAnimation.addEventListener('finish', () => {
+        if (panel._idxDockAnimation === dockAnimation) panel._idxDockAnimation = null;
+      }, { once: true });
+      dockAnimation.addEventListener('cancel', () => {
+        if (panel._idxDockAnimation === dockAnimation) panel._idxDockAnimation = null;
+      }, { once: true });
+    }
+
+    if (!collapsed) {
+      panel._idxExpandTimer = window.setTimeout(() => {
+        panel.classList.remove('idx-expanding');
+        panel._idxExpandTimer = 0;
+      }, 390);
     }
   }
 

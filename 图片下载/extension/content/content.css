@@ -1,9 +1,9 @@
 :root {
   --idx-accent: #ff2442;
   --idx-accent-rgb: 255, 36, 66;
-  --idx-accent-dark: #d81e38;
+  --idx-accent-dark: #d81e38; /* red text/icon on a light tint — matches --accent-ink in styles.css */
   --idx-ink: #25211d;
-  --idx-muted: rgba(37, 33, 29, 0.64);
+  --idx-muted: #746d64; /* warm solid grey, aligned with --muted in styles.css (solid is safer over arbitrary host pages) */
   --idx-line: rgba(62, 52, 42, 0.1);
   --idx-line-strong: rgba(62, 52, 42, 0.16);
   --idx-soft: rgba(62, 52, 42, 0.045);
@@ -12,6 +12,12 @@
   --idx-surface-strong: #fffefa;
   --idx-motion-fast: 120ms;
   --idx-motion-med: 150ms;
+  --idx-motion-dock: 320ms;
+  --idx-motion-dock-inner: 240ms;
+  --idx-motion-dock-hide-delay: 170ms;
+  --idx-ease-dock: cubic-bezier(0.25, 1, 0.5, 1);
+  --idx-ease-dock-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --idx-ease-dock-exit: cubic-bezier(0.7, 0, 0.84, 0);
 }
 
 .idx-image-host {
@@ -115,7 +121,17 @@
   backdrop-filter: blur(22px) saturate(1.22) !important;
   -webkit-backdrop-filter: blur(22px) saturate(1.22) !important;
   transform-origin: right bottom !important;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), border-color 180ms ease-out, border-radius 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease-out, --idx-progress 340ms cubic-bezier(0.33, 1, 0.68, 1) !important;
+  overflow: hidden !important;
+  contain: layout paint !important;
+  transition:
+    transform var(--idx-motion-fast) var(--idx-ease-dock),
+    border-color 220ms ease-out,
+    border-radius var(--idx-motion-dock) var(--idx-ease-dock),
+    box-shadow var(--idx-motion-dock) var(--idx-ease-dock),
+    background 220ms ease-out,
+    backdrop-filter var(--idx-motion-dock) var(--idx-ease-dock),
+    -webkit-backdrop-filter var(--idx-motion-dock) var(--idx-ease-dock),
+    --idx-progress 340ms cubic-bezier(0.33, 1, 0.68, 1) !important;
 }
 
 /* Registering the angle lets the conic-gradient ring glide between updates
@@ -141,12 +157,18 @@
   background: rgba(var(--idx-accent-rgb), 0.075) !important;
   color: var(--idx-accent-dark) !important;
   font-size: 11px !important;
-  font-weight: 780 !important;
+  font-weight: 700 !important;
   letter-spacing: 0 !important;
   white-space: nowrap !important;
   opacity: 0.86 !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
+  transform-origin: right center !important;
+  visibility: visible !important;
+  transition:
+    opacity 190ms ease-out,
+    transform var(--idx-motion-dock-inner) var(--idx-ease-dock),
+    visibility 0s linear 0s !important;
 }
 
 .idx-site-pill::before {
@@ -170,9 +192,14 @@
   background: rgba(var(--idx-accent-rgb), 0.085) !important;
   color: var(--idx-accent) !important;
   font-size: 17px !important;
-  font-weight: 850 !important;
+  font-weight: 800 !important;
   line-height: 1 !important;
-  transition: transform var(--idx-motion-med), box-shadow var(--idx-motion-med), background 180ms ease-out, color 180ms ease-out !important;
+  transform-origin: center !important;
+  transition:
+    transform var(--idx-motion-dock) var(--idx-ease-dock),
+    box-shadow var(--idx-motion-dock) var(--idx-ease-dock),
+    background 220ms ease-out,
+    color 220ms ease-out !important;
 }
 
 .idx-count::after {
@@ -218,11 +245,22 @@
   overflow-x: auto !important;
   scrollbar-width: none !important;
   transform-origin: right center !important;
-  transition: opacity 180ms ease-out, transform 260ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  max-width: min(390px, calc(100vw - 152px)) !important;
+  visibility: visible !important;
+  transition:
+    opacity 210ms ease-out,
+    transform var(--idx-motion-dock) var(--idx-ease-dock),
+    background 220ms ease-out,
+    visibility 0s linear 0s !important;
 }
 
 #idx-mini-panel .idx-actions::-webkit-scrollbar {
   display: none !important;
+}
+
+#idx-mini-panel .idx-actions button {
+  opacity: 1 !important;
+  transform-origin: center !important;
 }
 
 #idx-mini-panel button {
@@ -237,7 +275,7 @@
   color: var(--idx-muted) !important;
   cursor: pointer !important;
   font-size: 12px !important;
-  font-weight: 680 !important;
+  font-weight: 600 !important;
   white-space: nowrap !important;
   user-select: none !important;
   transition: transform var(--idx-motion-fast), background var(--idx-motion-fast), color var(--idx-motion-fast), opacity var(--idx-motion-fast), box-shadow var(--idx-motion-fast) !important;
@@ -312,6 +350,17 @@
   background: var(--idx-soft) !important;
   color: rgba(37, 33, 29, 0.42) !important;
   font-size: 12px !important;
+  max-width: 30px !important;
+  overflow: hidden !important;
+  opacity: 1 !important;
+  transform-origin: center !important;
+  visibility: visible !important;
+  transition:
+    opacity 180ms ease-out,
+    transform var(--idx-motion-dock) var(--idx-ease-dock),
+    background var(--idx-motion-fast),
+    color var(--idx-motion-fast),
+    visibility 0s linear 0s !important;
 }
 
 #idx-mini-panel .idx-fold:not(:disabled):hover {
@@ -335,6 +384,7 @@
 #idx-mini-panel.idx-collapsed {
   width: 54px !important;
   height: 54px !important;
+  gap: 0 !important;
   padding: 0 !important;
   justify-content: center !important;
   border: 1px solid rgba(var(--idx-accent-rgb), 0.22) !important;
@@ -358,7 +408,24 @@
 #idx-mini-panel.idx-collapsed .idx-actions,
 #idx-mini-panel.idx-collapsed .idx-fold,
 #idx-mini-panel.idx-collapsed .idx-site-pill {
-  display: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  margin: 0 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  border-width: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateX(10px) scale(0.96) !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  transition:
+    opacity 160ms var(--idx-ease-dock-exit),
+    transform 220ms var(--idx-ease-dock-exit),
+    background 220ms ease-out,
+    color 120ms ease-out,
+    visibility 0s linear var(--idx-motion-dock-hide-delay) !important;
 }
 
 #idx-mini-panel.idx-collapsed .idx-count {
@@ -368,6 +435,53 @@
   flex-direction: column !important;
   background: transparent !important;
   cursor: pointer !important;
+  transform: scale(0.985) !important;
+}
+
+#idx-mini-panel.idx-collapsed .idx-actions button {
+  opacity: 0 !important;
+  transform: translateX(6px) scale(0.98) !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-site-pill {
+  transition-delay: 34ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-count {
+  transition-delay: 0ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button {
+  transition:
+    transform 190ms var(--idx-ease-dock-enter),
+    opacity 190ms ease-out,
+    background var(--idx-motion-fast),
+    color var(--idx-motion-fast),
+    box-shadow var(--idx-motion-fast) !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(1) {
+  transition-delay: 30ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(2) {
+  transition-delay: 44ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(3) {
+  transition-delay: 58ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(4) {
+  transition-delay: 72ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(5) {
+  transition-delay: 86ms !important;
+}
+
+#idx-mini-panel.idx-expanding .idx-actions button:nth-child(6) {
+  transition-delay: 100ms !important;
 }
 
 #idx-mini-panel.idx-collapsed .idx-count::after {
@@ -397,7 +511,7 @@
   margin-top: 2px !important;
   color: var(--idx-accent-dark) !important;
   font-size: 8px !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
   opacity: 0.72 !important;
 }
 
@@ -508,8 +622,8 @@
 .idx-modal-card h3 {
   margin: 0 0 8px !important;
   color: var(--idx-ink) !important;
-  font-size: 17px !important;
-  font-weight: 700 !important;
+  font-size: 18px !important;
+  font-weight: 800 !important;
 }
 
 .idx-modal-card p {
@@ -558,22 +672,25 @@
 
 .idx-modal-foot button {
   all: unset !important;
-  height: 36px !important;
+  height: 34px !important;
   display: inline-flex !important;
   align-items: center !important;
   padding: 0 14px !important;
   border-radius: 18px !important;
   cursor: pointer !important;
   font-size: 13px !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
 }
 
-.idx-modal-cancel {
+/* Scoped under .idx-modal-foot so these beat the `all: unset !important` reset on
+   `.idx-modal-foot button` (equal importance, higher specificity wins) — otherwise
+   both action buttons render as plain transparent text. */
+.idx-modal-foot .idx-modal-cancel {
   background: var(--idx-soft-hover) !important;
   color: rgba(37, 33, 29, 0.72) !important;
 }
 
-.idx-modal-ok {
+.idx-modal-foot .idx-modal-ok {
   background: var(--idx-accent) !important;
   color: #fff !important;
 }
@@ -594,7 +711,7 @@
   color: var(--idx-ink) !important;
   cursor: pointer !important;
   font-size: 13px !important;
-  font-weight: 720 !important;
+  font-weight: 700 !important;
   transition: background var(--idx-motion-fast), border-color var(--idx-motion-fast), box-shadow var(--idx-motion-fast), transform var(--idx-motion-fast) !important;
 }
 

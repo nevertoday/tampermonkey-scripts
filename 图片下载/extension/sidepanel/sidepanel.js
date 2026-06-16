@@ -14,6 +14,13 @@ const SITES = [
     theme: { accent: '#bd081c', rgb: '189, 8, 28', dark: '#8c0617', badge: 'Pinterest' }
   },
   {
+    id: 'x',
+    name: 'X',
+    host: 'x.com',
+    defaultPrefix: 'x',
+    theme: { accent: '#1d9bf0', rgb: '29, 155, 240', dark: '#0f6fad', badge: 'X' }
+  },
+  {
     id: 'wechat',
     name: '微信公众号',
     host: 'mp.weixin.qq.com',
@@ -40,6 +47,26 @@ const SITES = [
     host: 'huaban.com',
     defaultPrefix: 'huaban',
     theme: { accent: '#c95f68', rgb: '201, 95, 104', dark: '#9e414d', badge: '花瓣' }
+  },
+  {
+    id: 'dribbble',
+    name: 'Dribbble',
+    host: 'dribbble.com',
+    defaultPrefix: 'dribbble',
+    theme: { accent: '#ea4c89', rgb: '234, 76, 137', dark: '#c32361', badge: 'Dribbble' }
+  },
+  {
+    id: 'instagram',
+    name: 'Instagram',
+    host: 'instagram.com',
+    defaultPrefix: 'instagram',
+    theme: {
+      accent: '#d62976',
+      rgb: '214, 41, 118',
+      dark: '#a01e6b',
+      badge: 'Instagram',
+      gradient: 'linear-gradient(135deg, #feda75, #fa7e1e 28%, #d62976 56%, #962fbf 78%, #4f5bd5)'
+    }
   }
 ];
 
@@ -152,7 +179,23 @@ function bindDonation() {
 }
 
 function bindLinkDownload() {
-  document.getElementById('open-link-download')?.addEventListener('click', showLinkDownloadModal);
+  const input = document.getElementById('link-dl-input');
+  const prefixInput = document.getElementById('link-dl-prefix');
+  const countEl = document.getElementById('link-dl-count');
+  if (!input || !prefixInput || !countEl) return;
+  const actionButtons = document.querySelectorAll('[data-link-mode]');
+  const refresh = () => {
+    const count = parseLinks(input.value).length;
+    countEl.textContent = `${count} 条链接`;
+    actionButtons.forEach((button) => { button.disabled = count === 0; });
+  };
+  input.addEventListener('input', refresh);
+  actionButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      runLinkDownload(parseLinks(input.value), prefixInput.value.trim() || 'links', button.dataset.linkMode, button);
+    });
+  });
+  refresh();
 }
 
 function parseLinks(text) {
@@ -170,46 +213,7 @@ function parseLinks(text) {
     .map((url, index) => ({ id: `link-${index}`, url }));
 }
 
-function showLinkDownloadModal() {
-  const modal = showPanelModal({
-    eyebrow: '链接下载',
-    title: '粘贴图片链接',
-    description: '每行一个图片直链，选择下载方式即可，无需打开网页。',
-    body: `
-      <div class="link-dl" style="--history-accent: var(--accent); --history-rgb: var(--accent-rgb); --history-dark: var(--accent-hover);">
-        <textarea id="link-dl-input" spellcheck="false" placeholder="https://example.com/a.jpg&#10;https://example.com/b.png&#10;https://example.com/c.webp"></textarea>
-        <div class="link-dl-row">
-          <label class="link-dl-prefix"><span>前缀</span><input id="link-dl-prefix" type="text" value="links" aria-label="文件名前缀"></label>
-          <span class="link-dl-count" id="link-dl-count">0 条链接</span>
-        </div>
-        <div class="history-download-actions">
-          <button type="button" data-link-mode="links" disabled>链接文本</button>
-          <button type="button" data-link-mode="direct" disabled>逐张下载</button>
-          <button type="button" class="history-download-primary" data-link-mode="zip" disabled>ZIP 打包</button>
-        </div>
-      </div>
-    `
-  });
-  const input = modal.querySelector('#link-dl-input');
-  const prefixInput = modal.querySelector('#link-dl-prefix');
-  const countEl = modal.querySelector('#link-dl-count');
-  const actionButtons = modal.querySelectorAll('[data-link-mode]');
-  const refresh = () => {
-    const count = parseLinks(input.value).length;
-    countEl.textContent = `${count} 条链接`;
-    actionButtons.forEach((button) => { button.disabled = count === 0; });
-  };
-  input.addEventListener('input', refresh);
-  actionButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      runLinkDownload(parseLinks(input.value), prefixInput.value.trim() || 'links', button.dataset.linkMode, button, modal);
-    });
-  });
-  refresh();
-  window.setTimeout(() => input.focus(), 30);
-}
-
-async function runLinkDownload(entries, prefix, mode, button, modal) {
+async function runLinkDownload(entries, prefix, mode, button) {
   if (!entries.length) {
     setStatus('没有识别到有效的图片链接');
     return;
@@ -230,7 +234,6 @@ async function runLinkDownload(entries, prefix, mode, button, modal) {
     });
     if (!response?.ok) throw new Error(response?.error || '下载失败');
     setStatus(historyDownloadMessage(response.result || {}));
-    closePanelModal(modal);
   } catch (error) {
     setStatus(String(error?.message || error || '下载失败'));
   } finally {
@@ -240,13 +243,48 @@ async function runLinkDownload(entries, prefix, mode, button, modal) {
 }
 
 function bindTabs() {
-  document.querySelectorAll('.tab').forEach((tab) => {
+  const nav = document.querySelector('.tabs');
+  const tabs = Array.from(document.querySelectorAll('.tab'));
+  tabs.forEach((tab, index) => {
     tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach((item) => item.classList.toggle('active', item === tab));
+      const prev = tabs.findIndex((item) => item.classList.contains('active'));
+      if (prev === index) return;
+      tabs.forEach((item) => item.classList.toggle('active', item === tab));
+      // Move the sliding pill to this tab and give the new panel a directional
+      // slide-in: from the right when moving forward, from the left when back.
+      nav.style.setProperty('--tab-index', String(index));
+      const direction = index > prev ? 1 : -1;
       document.querySelectorAll('.panel').forEach((panel) => panel.classList.remove('active'));
-      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      const panel = document.getElementById(`tab-${tab.dataset.tab}`);
+      panel.style.setProperty('--enter-x', `${direction * 16}px`);
+      panel.classList.add('active');
+      onTabShown(tab.dataset.tab);
     });
   });
+}
+
+// The footer is a shared status/feedback line. Each tab carries its own resting
+// hint so a stale page-status message (e.g. "此页面不支持") never lingers on a
+// tab where it doesn't apply. Download results still overwrite it via setStatus.
+function onTabShown(name) {
+  if (name === 'sites') {
+    refreshStatus();
+    return;
+  }
+  if (name === 'links') {
+    const input = document.getElementById('link-dl-input');
+    const count = parseLinks(input?.value || '').length;
+    setStatus(count ? `${count} 条链接待下载` : '粘贴图片直链即可下载');
+    window.setTimeout(() => input?.focus(), 60);
+    return;
+  }
+  if (name === 'history') {
+    setStatus(historyItems.length ? '点任意记录可预览或重新下载' : '还没有历史记录');
+    return;
+  }
+  if (name === 'settings') {
+    setStatus('设置即时保存并同步到网页');
+  }
 }
 
 function bindHistory() {
@@ -352,13 +390,15 @@ function renderSites() {
     const siteSettings = settings.sites[site.id] || { enabled: true, prefix: site.defaultPrefix };
     const theme = siteTheme(site);
     const expanded = expandedSites.has(site.id);
+    const isOff = siteSettings.enabled === false;
     const settingsId = `site-settings-${site.id}`;
     const card = document.createElement('article');
-    card.className = `site-card${expanded ? ' is-expanded' : ''}`;
+    card.className = `site-card${expanded ? ' is-expanded' : ''}${isOff ? ' is-off' : ''}`;
     card.dataset.site = site.id;
     card.style.setProperty('--site-accent', theme.accent);
     card.style.setProperty('--site-rgb', theme.rgb);
     card.style.setProperty('--site-dark', theme.dark);
+    if (theme.gradient) card.style.setProperty('--site-gradient', theme.gradient);
     card.innerHTML = `
       <div class="site-head">
         <button class="site-toggle" type="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="${escapeHtml(settingsId)}">
@@ -385,7 +425,10 @@ function renderSites() {
     const enabled = card.querySelector('input[type="checkbox"]');
     const prefix = card.querySelector('input[type="text"]');
     toggle.addEventListener('click', () => toggleSiteCard(card, site.id));
-    enabled.addEventListener('change', () => updateSite(site.id, { enabled: enabled.checked }));
+    enabled.addEventListener('change', () => {
+      card.classList.toggle('is-off', !enabled.checked);
+      updateSite(site.id, { enabled: enabled.checked });
+    });
     prefix.addEventListener('change', () => updateSite(site.id, { prefix: prefix.value.trim() || site.defaultPrefix }));
     list.appendChild(card);
   }
@@ -683,7 +726,10 @@ function setupHistoryPreviewGrid(grid, entries) {
       const img = card.querySelector('img');
       if (img) {
         img.addEventListener('error', () => card.classList.add('is-broken'));
-        img.addEventListener('load', () => card.classList.remove('is-broken'));
+        img.addEventListener('load', () => {
+          card.classList.remove('is-broken');
+          card.classList.add('is-loaded');
+        });
       }
       grid.appendChild(card);
       resolveThumb(card, objectUrls);

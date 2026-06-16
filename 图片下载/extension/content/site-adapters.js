@@ -94,6 +94,47 @@
       }
     },
     {
+      id: 'x',
+      name: 'X',
+      defaultPrefix: 'x',
+      theme: {
+        accent: '#1d9bf0',
+        rgb: '29, 155, 240',
+        dark: '#0f6fad',
+        badge: 'X'
+      },
+      hosts: ['x.com', 'twitter.com'],
+      matches: () => /(^|\.)(x|twitter)\.com$/i.test(location.hostname),
+      images(root = document) {
+        const seen = new Set();
+        const candidates = [
+          ...Array.from(root.querySelectorAll('img')),
+          ...twitterBackgroundImageElements(root)
+        ];
+        return candidates.filter((img) => {
+          const url = this.url(img);
+          if (!isTwitterMediaUrl(url)) return false;
+          if (!twitterImageContext(img)) return false;
+          if (!hasReasonableSize(img, 80, 6000)) return false;
+          const host = this.hostFor(img);
+          const key = `${url}::${host ? elementPathKey(host) : ''}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      },
+      hostFor(img) {
+        return twitterPhotoHost(img) || img.parentElement;
+      },
+      url(img) {
+        const raw = parseSrcset(img.getAttribute('srcset')) || img.currentSrc || img.src || cssBackgroundImageUrl(img) || '';
+        return normalizeTwitterImage(raw);
+      },
+      key(_img, url) {
+        return `x-${twitterMediaId(url) || hash(url).slice(0, 10)}`;
+      }
+    },
+    {
       id: 'wechat',
       name: '微信公众号',
       defaultPrefix: 'wechat',
@@ -149,7 +190,7 @@
       images(root = document) {
         return Array.from(root.querySelectorAll('img')).filter((img) => {
           const url = img.currentSrc || img.src || '';
-          if (!/drscdn\.500px\.org\/photo\//i.test(url)) return false;
+          if (!is500pxPhotoUrl(url)) return false;
           if (/user_avatar/i.test(url)) return false;
           if (/avatar|icon|logo/i.test(img.className || '')) return false;
           return hasReasonableSize(img, 60, 3000);
@@ -242,6 +283,87 @@
         const pinId = huabanPinIdFromImage(img) || huabanPinIdFromLocation();
         return pinId ? `hb-${pinId}-${hash(url).slice(0, 8)}` : `hb-${hash(url).slice(0, 8)}`;
       }
+    },
+    {
+      id: 'dribbble',
+      name: 'Dribbble',
+      defaultPrefix: 'dribbble',
+      theme: {
+        accent: '#ea4c89',
+        rgb: '234, 76, 137',
+        dark: '#c32361',
+        badge: 'Dribbble'
+      },
+      hosts: ['dribbble.com'],
+      matches: () => /(^|\.)dribbble\.com$/i.test(location.hostname),
+      images(root = document) {
+        return Array.from(root.querySelectorAll('img')).filter((img) => {
+          if (!isDribbblePhotoUrl(this.url(img))) return false;
+          const mark = `${img.className || ''} ${img.id || ''} ${img.alt || ''}`.toLowerCase();
+          if (/avatar|icon|logo|emoji|badge/.test(mark)) return false;
+          return hasReasonableSize(img, 80, 6000);
+        });
+      },
+      hostFor(img) {
+        return img.closest('li.shot-thumbnail, [data-thumbnail-id], figure, a[href*="/shots/"], .shot-media-content') || img.parentElement;
+      },
+      url(img) {
+        const raw = parseSrcset(img.getAttribute('srcset')) || img.currentSrc || img.src || img.getAttribute('data-src') || '';
+        return normalizeDribbble(raw);
+      },
+      key(img, url) {
+        const fromLink = img.closest('a[href*="/shots/"]')?.href?.match(/\/shots\/(\d+)/)?.[1];
+        const fromAttr = img.closest('[data-thumbnail-id]')?.getAttribute('data-thumbnail-id');
+        const fromLocation = location.href.match(/\/shots\/(\d+)/)?.[1];
+        const shotId = fromLink || fromAttr || fromLocation;
+        return shotId ? `dr-${shotId}-${hash(url).slice(0, 8)}` : `dr-${hash(url).slice(0, 8)}`;
+      }
+    },
+    {
+      id: 'instagram',
+      name: 'Instagram',
+      defaultPrefix: 'instagram',
+      theme: {
+        accent: '#d62976',
+        rgb: '214, 41, 118',
+        dark: '#a01e6b',
+        badge: 'Instagram'
+      },
+      hosts: ['instagram.com'],
+      matches: () => /(^|\.)instagram\.com$/i.test(location.hostname),
+      images(root = document) {
+        return Array.from(root.querySelectorAll('img')).filter((img) => {
+          if (!isInstagramMediaUrl(this.url(img))) return false;
+          // Avatars and story-highlight covers slip past the URL filter — they are
+          // square 150s with a "profile picture" alt or a highlights link.
+          const alt = (img.alt || '').toLowerCase();
+          if (/profile picture|profile photo|头像/.test(alt)) return false;
+          if (img.closest('a[href*="/stories/highlights/"]')) return false;
+          const mark = `${img.className || ''} ${img.id || ''}`.toLowerCase();
+          if (/avatar|profilepic/.test(mark)) return false;
+          return hasReasonableSize(img, 200, 40000);
+        });
+      },
+      hostFor(img) {
+        return img.closest('article, a[href*="/p/"], a[href*="/reel/"], a[href*="/tv/"]') || img.parentElement;
+      },
+      usesFloatingControls() {
+        return true;
+      },
+      floatingControlOffset(_img, rect) {
+        return rect.height > 140 ? { x: 10, y: 14 } : { x: 8, y: 8 };
+      },
+      url(img) {
+        // Keep the signed query (oh/oe/stp) intact — IG CDN URLs 403 without it.
+        // The largest srcset candidate is the best resolution the page exposes.
+        const raw = parseSrcset(img.getAttribute('srcset')) || img.currentSrc || img.src || '';
+        return absoluteUrl(raw);
+      },
+      key(img, url) {
+        const link = img.closest('a[href*="/p/"], a[href*="/reel/"], a[href*="/tv/"]')?.getAttribute('href') || location.pathname;
+        const code = link.match(/\/(?:p|reel|tv)\/([^/?#]+)/)?.[1] || instagramMediaId(url);
+        return code ? `ig-${code}-${hash(url).slice(0, 8)}` : `ig-${hash(url).slice(0, 10)}`;
+      }
     }
   ];
 
@@ -298,6 +420,66 @@
     return location.href.match(/\/(?:explore|discovery\/item)\/([^/?#]+)/)?.[1] || null;
   }
 
+  function twitterImageContext(img) {
+    return twitterPhotoHost(img) || img.closest?.('article, [aria-modal="true"], [data-testid="twitterArticleReadView"], [data-testid="twitterArticleRichTextView"]') || null;
+  }
+
+  function twitterPhotoHost(img) {
+    return img.closest?.('[data-testid="tweetPhoto"], [data-testid="card.layoutLarge.media"], [data-testid="swipe-to-dismiss"], a[href*="/photo/"], a[href*="/media/"]') || null;
+  }
+
+  function twitterBackgroundImageElements(root) {
+    return Array.from(root.querySelectorAll('[style*="background-image"]')).filter((el) => isTwitterMediaUrl(cssBackgroundImageUrl(el)));
+  }
+
+  function cssBackgroundImageUrl(el) {
+    const value = el?.style?.backgroundImage || (typeof getComputedStyle === 'function' ? getComputedStyle(el).backgroundImage : '') || '';
+    const match = String(value).match(/url\((['"]?)(.*?)\1\)/i);
+    return match?.[2]?.replace(/&amp;/g, '&') || '';
+  }
+
+  function normalizeTwitterImage(url) {
+    const absolute = absoluteUrl(url);
+    if (!absolute) return '';
+    try {
+      const parsed = new URL(absolute);
+      if (!isTwitterMediaUrl(parsed.href)) return '';
+      const format = parsed.searchParams.get('format') || parsed.pathname.match(/\.([a-z0-9]+)$/i)?.[1] || '';
+      const hasVariant = parsed.searchParams.has('name');
+      parsed.search = '';
+      if (format) parsed.searchParams.set('format', format);
+      if (format || hasVariant) parsed.searchParams.set('name', 'orig');
+      parsed.hash = '';
+      return parsed.href;
+    } catch (_) {
+      return absolute;
+    }
+  }
+
+  function isTwitterMediaUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      return parsed.hostname === 'pbs.twimg.com' && /^\/(?:media|card_img|ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)\//i.test(parsed.pathname);
+    } catch (_) {
+      return /^https?:\/\/pbs\.twimg\.com\/(?:media|card_img|ext_tw_video_thumb|amplify_video_thumb|tweet_video_thumb)\//i.test(String(url || ''));
+    }
+  }
+
+  function twitterMediaId(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      return parsed.pathname.match(/\/media\/([^/?#]+)/i)?.[1]?.replace(/\.[a-z0-9]+$/i, '') || '';
+    } catch (_) {
+      return String(url || '').match(/\/media\/([^/?#]+)/i)?.[1]?.replace(/\.[a-z0-9]+$/i, '') || '';
+    }
+  }
+
+  function elementPathKey(el) {
+    if (!el) return '';
+    const rect = el.getBoundingClientRect?.();
+    return `${el.tagName || ''}:${Math.round(rect?.left || 0)}:${Math.round(rect?.top || 0)}:${Math.round(rect?.width || 0)}:${Math.round(rect?.height || 0)}`;
+  }
+
   function huabanPinLink(img) {
     const link = img.closest?.('a[href*="/pins/"]');
     if (!link?.href) return null;
@@ -329,6 +511,58 @@
       return parsed.href;
     } catch (_) {
       return absolute;
+    }
+  }
+
+  function isInstagramMediaUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      if (!/(^|\.)(cdninstagram\.com|fbcdn\.net)$/i.test(parsed.hostname)) return false;
+      // IG photo types: -15 is feed/post/reel media, -19 is profile pictures.
+      const type = parsed.pathname.match(/\/t\d+\.\d+-(\d+)\//)?.[1];
+      return type !== '19';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function instagramMediaId(url) {
+    // First long numeric run in the filename is a stable per-media id.
+    return String(url || '').match(/\/[^/]*?(\d{6,})_\d/)?.[1] || '';
+  }
+
+  function isDribbblePhotoUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      // Shots and uploads live on cdn.dribbble.com; skip user avatars on the same CDN.
+      return /^cdn\.dribbble\.com$/i.test(parsed.hostname) && !/\/avatars?\//i.test(parsed.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function normalizeDribbble(url) {
+    const absolute = absoluteUrl(url);
+    if (!absolute) return '';
+    try {
+      const parsed = new URL(absolute);
+      if (/(^|\.)dribbble\.com$/i.test(parsed.hostname)) {
+        // Drop transform params (resize/compress/format) to keep the full upload.
+        ['resize', 'compress', 'format', 'vertical', 'horizontal'].forEach((key) => parsed.searchParams.delete(key));
+        parsed.hash = '';
+      }
+      return parsed.href;
+    } catch (_) {
+      return absolute;
+    }
+  }
+
+  function is500pxPhotoUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      return /(^|\.)drscdn\.500px\.org$/i.test(parsed.hostname) && /^\/photo\//i.test(parsed.pathname);
+    } catch (_) {
+      return /drscdn\.500px\.org(?::\d+)?\/photo\//i.test(String(url || ''));
     }
   }
 

@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "拾图",
   "short_name": "拾图",
-  "version": "0.1.0",
-  "description": "在小红书、Pinterest、花瓣、微信公众号、500px、堆糖中拾取图片，并通过侧边栏批量下载。",
+  "version": "0.1.1",
+  "description": "在小红书、Pinterest、X、Instagram、Dribbble、花瓣、微信公众号、500px、堆糖中拾取图片，并通过侧边栏批量下载。",
   "icons": {
     "16": "assets/icon-16.png",
     "32": "assets/icon-32.png",
@@ -34,6 +34,11 @@
     "https://*.pinterest.com/*",
     "https://pinterest.com/*",
     "https://*.pinimg.com/*",
+    "https://*.x.com/*",
+    "https://x.com/*",
+    "https://*.twitter.com/*",
+    "https://twitter.com/*",
+    "https://pbs.twimg.com/*",
     "https://mp.weixin.qq.com/*",
     "https://mmbiz.qpic.cn/*",
     "https://mmbiz.qlogo.cn/*",
@@ -44,7 +49,13 @@
     "https://duitang.com/*",
     "https://*.dtstatic.com/*",
     "https://*.huaban.com/*",
-    "https://huaban.com/*"
+    "https://huaban.com/*",
+    "https://*.dribbble.com/*",
+    "https://dribbble.com/*",
+    "https://*.instagram.com/*",
+    "https://instagram.com/*",
+    "https://*.cdninstagram.com/*",
+    "https://*.fbcdn.net/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -68,13 +79,21 @@
         "https://xiaohongshu.com/*",
         "https://*.pinterest.com/*",
         "https://pinterest.com/*",
+        "https://*.x.com/*",
+        "https://x.com/*",
+        "https://*.twitter.com/*",
+        "https://twitter.com/*",
         "https://mp.weixin.qq.com/*",
         "https://*.500px.com/*",
         "https://500px.com/*",
         "https://*.duitang.com/*",
         "https://duitang.com/*",
         "https://*.huaban.com/*",
-        "https://huaban.com/*"
+        "https://huaban.com/*",
+        "https://*.dribbble.com/*",
+        "https://dribbble.com/*",
+        "https://*.instagram.com/*",
+        "https://instagram.com/*"
       ],
       "js": [
         "content/site-adapters.js",

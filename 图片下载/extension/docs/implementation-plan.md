@@ -25,7 +25,7 @@
 **Files:**
 - Create: `extension/content/site-adapters.js`
 
-- [x] Define adapters for 小红书, Pinterest, 微信公众号, 500px, 堆糖, and 花瓣.
+- [x] Define adapters for 小红书, Pinterest, X, 微信公众号, 500px, 堆糖, and 花瓣.
 - [x] Port URL normalization and content-image filters from existing scripts.
 - [x] Expose `window.ImageDownloaderAdapters`.
 - [x] Verify syntax with `node --check`.

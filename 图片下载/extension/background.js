@@ -3,6 +3,15 @@ importScripts('lib/image-cache.js');
 const DEFAULT_CONCURRENCY = 4;
 const HISTORY_KEY = 'downloadHistory';
 const HISTORY_LIMIT = 50;
+const pendingDownloadNames = new Map();
+const TRANSIENT_DOWNLOAD_PREFIX = 'idx-transient-download:';
+
+chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+  prunePendingDownloadNames();
+  const filename = consumePendingDownloadName(item.url) || consumePendingDownloadName(item.finalUrl);
+  if (!filename) return;
+  suggest({ filename, conflictAction: 'uniquify' });
+});
 
 chrome.runtime.onInstalled.addListener(() => {
   if (chrome.sidePanel?.setPanelBehavior) {
@@ -71,7 +80,7 @@ async function handleDownload(payload, sender = {}) {
 
   if (mode === 'links') {
     const body = entries.map((entry) => entry.url).join('\n');
-    await downloadDataUrl(textDataUrl(body), `${baseName}.txt`);
+    await downloadBlob(new Blob([body], { type: 'text/plain;charset=utf-8' }), `${baseName}.txt`);
     const result = { count: entries.length, failed: 0, mode };
     await recordHistory(payload, result);
     cacheEntries(entries).catch(() => {}); // silently keep bytes so links survive expiry
@@ -87,12 +96,11 @@ async function handleDownload(payload, sender = {}) {
         // Prefer cached bytes: survives expired CDN links and avoids hotlink 403s.
         const cached = await ImageCache.getBlob(entry.url);
         const filename = `${baseName}-${String(index + 1).padStart(3, '0')}.${ext(entry.url, cached?.type)}`;
-        await chrome.downloads.download({
-          url: cached ? await blobToDataUrl(cached) : entry.url,
-          filename,
-          saveAs: false,
-          conflictAction: 'uniquify'
-        });
+        if (cached) {
+          await downloadBlob(cached, filename);
+        } else {
+          await downloadUrl(entry.url, filename);
+        }
       } catch (_) {
         failed += 1;
       }
@@ -138,7 +146,7 @@ async function handleDownload(payload, sender = {}) {
     await progress({ phase: 'packing', done, total: files.length });
   });
   await progress({ phase: 'saving', done: files.length, total: files.length });
-  await downloadDataUrl(await blobToDataUrl(zip), `${baseName}.zip`);
+  await downloadBlob(zip, `${baseName}.zip`);
   const result = { count: files.length, failed, mode: 'zip' };
   await progress({ phase: 'done', done: files.length, total: files.length });
   await recordHistory(payload, result);
@@ -206,11 +214,8 @@ function normalizeHistoryEntries(entries) {
     });
 }
 
-function textDataUrl(text) {
-  return `data:text/plain;charset=utf-8,${encodeURIComponent(text)}`;
-}
-
-async function downloadDataUrl(url, filename) {
+async function downloadUrl(url, filename) {
+  rememberDownloadName(url, filename);
   return chrome.downloads.download({
     url,
     filename,
@@ -219,14 +224,44 @@ async function downloadDataUrl(url, filename) {
   });
 }
 
-async function blobToDataUrl(blob) {
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let binary = '';
-  const size = 0x8000;
-  for (let index = 0; index < bytes.length; index += size) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + size));
+async function downloadBlob(blob, filename) {
+  const token = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const safeFilename = sanitizeFilename(filename);
+  const key = `${TRANSIENT_DOWNLOAD_PREFIX}${token}`;
+  const stored = await ImageCache.put(key, blob, { skipEvict: true });
+  if (!stored) throw new Error('无法准备下载文件。请重试。');
+  await chrome.tabs.create({
+    url: chrome.runtime.getURL(`download/download.html?token=${encodeURIComponent(token)}&filename=${encodeURIComponent(safeFilename)}`),
+    active: false
+  });
+  return 0;
+}
+
+function rememberDownloadName(url, filename) {
+  if (!url || !filename) return;
+  const key = String(url);
+  const queue = pendingDownloadNames.get(key) || [];
+  queue.push({ filename, expiresAt: Date.now() + 60000 });
+  pendingDownloadNames.set(key, queue);
+}
+
+function consumePendingDownloadName(url) {
+  if (!url) return '';
+  const key = String(url);
+  const queue = pendingDownloadNames.get(key);
+  if (!queue?.length) return '';
+  const item = queue.shift();
+  if (!queue.length) pendingDownloadNames.delete(key);
+  return item?.filename || '';
+}
+
+function prunePendingDownloadNames() {
+  const now = Date.now();
+  for (const [key, queue] of pendingDownloadNames.entries()) {
+    const live = queue.filter((item) => item.expiresAt > now);
+    if (live.length) pendingDownloadNames.set(key, live);
+    else pendingDownloadNames.delete(key);
   }
-  return `data:${blob.type || 'application/octet-stream'};base64,${btoa(binary)}`;
 }
 
 async function makeZip(files, onProgress) {

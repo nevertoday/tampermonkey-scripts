@@ -4,7 +4,8 @@
 
 :root {
   --accent: #ff2442;
-  --accent-hover: #e6002e;
+  --accent-hover: #e6002e; /* darker fill for hover/press on solid red */
+  --accent-ink: #d81e38; /* red used as text/icon on a light tint — matches content.css */
   --accent-rgb: 255, 36, 66;
   --current-accent: #ff2442;
   --current-rgb: 255, 36, 66;
@@ -13,10 +14,10 @@
   --line: rgba(62, 52, 42, 0.1);
   --line-strong: rgba(62, 52, 42, 0.16);
   --bg: #f6f4ef;
-  --surface: rgba(255, 255, 255, 0.92);
+  --surface: rgba(255, 254, 250, 0.92); /* warm white, aligned with --surface-strong and content.css */
   --surface-strong: #fffefa;
   --soft: rgba(62, 52, 42, 0.045);
-  --soft-hover: rgba(62, 52, 42, 0.085);
+  --soft-hover: rgba(62, 52, 42, 0.08);
   --shadow-soft: 0 4px 24px rgba(42, 34, 26, 0.07), 0 12px 48px rgba(42, 34, 26, 0.035);
   --shadow-accent: 0 2px 12px rgba(var(--accent-rgb), 0.18), 0 4px 20px rgba(42, 34, 26, 0.07);
   --motion-fast: 120ms;
@@ -105,8 +106,9 @@ h1 {
 }
 
 .tabs {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 5px;
   margin: 10px 14px 0;
   padding: 5px;
@@ -116,6 +118,25 @@ h1 {
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* Single accent pill that glides behind the active tab instead of snapping
+   the background from button to button. The spring easing gives a subtle
+   overshoot so the slide feels physical rather than mechanical. */
+.tabs::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  height: 32px;
+  width: calc((100% - 25px) / 4);
+  border-radius: 16px;
+  background: var(--accent);
+  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.2);
+  transform: translateX(calc(var(--tab-index, 0) * (100% + 5px)));
+  transition: transform 440ms cubic-bezier(0.34, 1.32, 0.5, 1);
+  z-index: 0;
+  pointer-events: none;
 }
 
 button,
@@ -136,7 +157,7 @@ select {
 
 button {
   cursor: pointer;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
   user-select: none;
 }
@@ -156,27 +177,29 @@ button:disabled {
 }
 
 .tab {
+  position: relative;
+  z-index: 1;
   height: 32px;
   background: transparent;
   color: var(--muted);
   border-radius: 16px;
+  transition: color var(--motion-med), transform var(--motion-fast);
 }
 
 .tab.active {
-  background: var(--accent);
+  background: transparent;
   color: #fff;
-  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.2);
+  box-shadow: none;
 }
 
 .tab:not(.active):not(:disabled):hover {
   transform: none;
-  background: var(--soft-hover);
   color: var(--ink);
 }
 
 .tab.active:not(:disabled):hover {
   transform: none;
-  background: var(--accent);
+  background: transparent;
   color: #fff;
 }
 
@@ -197,7 +220,7 @@ button:disabled {
 
 .panel.active {
   display: block;
-  animation: panel-enter var(--motion-med);
+  animation: panel-enter 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 select {
@@ -218,44 +241,17 @@ select {
   background: var(--accent-hover);
 }
 
+.panel-lead {
+  margin: 2px 4px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .site-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 12px;
-}
-
-.link-entry {
-  width: 100%;
-  height: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 13px 16px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-  text-align: left;
-}
-
-.link-entry:not(:disabled):hover {
-  transform: translateY(-1px);
-  border-color: rgba(var(--accent-rgb), 0.32);
-  background: var(--surface-strong);
-}
-
-.link-entry-main {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--accent);
-}
-
-.link-entry-sub {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
 }
 
 .link-dl {
@@ -264,9 +260,27 @@ select {
   gap: 12px;
 }
 
+/* On its own tab the link panel fills the available height so the prefix row and
+   download buttons stay pinned to the bottom while the textarea takes the slack. */
+#tab-links.panel.active {
+  display: flex;
+  flex-direction: column;
+}
+
+#tab-links .link-dl {
+  flex: 1;
+  min-height: 0;
+}
+
+#tab-links .link-dl textarea {
+  flex: 1;
+  min-height: 120px;
+  resize: none;
+}
+
 .link-dl textarea {
   width: 100%;
-  min-height: 144px;
+  min-height: 220px;
   resize: vertical;
   padding: 10px 12px;
   border: 1px solid var(--line);
@@ -383,7 +397,7 @@ select {
   background: rgba(var(--history-rgb), 0.12);
   font-size: 11px;
   font-style: normal;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .history-filter-chip.active {
@@ -518,15 +532,21 @@ select {
 }
 
 .history-preview {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  align-content: start;
-  gap: 8px;
-  max-height: 300px;
+  /* Waterfall / masonry: images keep their real aspect ratio instead of being
+     cropped into squares, so portrait and landscape pins both read naturally. */
+  column-count: 3;
+  column-gap: 8px;
+  max-height: 320px;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   padding-right: 2px;
+}
+
+@media (max-width: 340px) {
+  .history-preview {
+    column-count: 2;
+  }
 }
 
 .history-preview::-webkit-scrollbar {
@@ -539,7 +559,7 @@ select {
 }
 
 .history-preview-sentinel {
-  grid-column: 1 / -1;
+  column-span: all;
   height: 1px;
 }
 
@@ -552,17 +572,25 @@ select {
 }
 
 .history-preview-card {
-  aspect-ratio: 1;
   position: relative;
   display: block;
   overflow: hidden;
+  width: 100%;
+  margin-bottom: 8px;
+  break-inside: avoid;
+  background: var(--surface-strong);
+}
+
+/* Reserve space while the thumbnail is still loading (or broken) so the
+   masonry columns don't collapse to zero height and jump on load. */
+.history-preview-card:not(.is-loaded) {
+  min-height: 110px;
 }
 
 .history-preview-card img {
   width: 100%;
-  height: 100%;
+  height: auto;
   display: block;
-  object-fit: cover;
   background: var(--surface-strong);
 }
 
@@ -578,7 +606,7 @@ select {
   place-items: center;
   color: var(--muted);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .history-preview-card span {
@@ -593,7 +621,7 @@ select {
   background: rgba(255, 254, 250, 0.88);
   color: var(--history-dark);
   font-size: 10px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .history-preview-more,
@@ -605,7 +633,7 @@ select {
   color: var(--muted);
   text-align: center;
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .history-download-actions {
@@ -678,6 +706,13 @@ select {
   background: rgba(255, 254, 250, 0.96);
 }
 
+/* 停用的站点把身份信息（圆点/名称/域名/徽标）调暗，让"哪些开着"一眼可辨；
+   开关与展开按钮保持清晰可操作。 */
+.site-card.is-off .site-title,
+.site-card.is-off .site-toggle small {
+  opacity: 0.45;
+}
+
 .site-head,
 .switch-row {
   display: flex;
@@ -719,7 +754,7 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--site-dark, var(--accent));
+  color: var(--site-dark, var(--accent-ink));
   font-size: 12px;
   font-weight: 800;
 }
@@ -751,7 +786,9 @@ select {
   height: 10px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--site-accent, var(--accent));
+  /* --site-gradient is only set for brands whose identity is a gradient (e.g.
+     Instagram); everyone else falls back to their solid accent. */
+  background: var(--site-gradient, var(--site-accent, var(--accent)));
   box-shadow: 0 0 0 4px rgba(var(--site-rgb, var(--accent-rgb)), 0.1);
 }
 
@@ -763,9 +800,9 @@ select {
   padding: 0 8px;
   border-radius: 999px;
   background: rgba(var(--site-rgb, var(--accent-rgb)), 0.09);
-  color: var(--site-dark, var(--accent));
+  color: var(--site-dark, var(--accent-ink));
   font-size: 11px;
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .site-card small,
@@ -865,7 +902,7 @@ input[type="checkbox"]:checked {
 
 .site-card input[type="checkbox"]:checked {
   border-color: var(--site-accent, var(--accent));
-  background: var(--site-accent, var(--accent));
+  background: var(--site-gradient, var(--site-accent, var(--accent)));
 }
 
 input[type="checkbox"]:checked::after {
@@ -943,7 +980,7 @@ input[type="checkbox"]:active {
   overflow: hidden;
   color: var(--muted);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -987,7 +1024,7 @@ input[type="checkbox"]:active {
   padding: 0 10px;
   border-radius: 999px;
   background: rgba(var(--accent-rgb), 0.08);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 12px;
   font-weight: 800;
 }
@@ -1060,7 +1097,7 @@ input[type="checkbox"]:active {
   padding: 0 9px;
   border-radius: 999px;
   background: rgba(var(--accent-rgb), 0.08);
-  color: var(--accent);
+  color: var(--accent-ink);
   font-size: 12px;
   font-weight: 800;
 }
@@ -1135,7 +1172,7 @@ input[type="checkbox"]:active {
 .panel-modal h3 {
   margin: 0;
   font-size: 18px;
-  font-weight: 850;
+  font-weight: 800;
   line-height: 1.2;
 }
 
@@ -1229,18 +1266,18 @@ footer {
 }
 
 footer.is-updated {
-  color: var(--accent);
+  color: var(--accent-ink);
   transform: translateY(-1px);
 }
 
 @keyframes panel-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateX(var(--enter-x, 0)) translateY(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateX(0) translateY(0);
   }
 }
 

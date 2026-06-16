@@ -73,7 +73,7 @@
     return victims;
   }
 
-  async function put(url, blob) {
+  async function put(url, blob, options = {}) {
     if (!blob || !blob.size) return false;
     try {
       const db = await openDb();
@@ -83,7 +83,7 @@
       tx.objectStore(STORE).put({ key, url, blob, type: blob.type || '', size: blob.size, createdAt });
       tx.objectStore(META).put({ key, size: blob.size, createdAt });
       await txDone(tx);
-      scheduleEvict();
+      if (!options.skipEvict) scheduleEvict();
       return true;
     } catch (_) {
       return false;
@@ -146,5 +146,19 @@
     }
   }
 
-  global.ImageCache = { put, getBlob, has, evict, clear, keyFor, planEviction, MAX_BYTES };
+  async function remove(url) {
+    try {
+      const db = await openDb();
+      const key = keyFor(url);
+      const tx = db.transaction([STORE, META], 'readwrite');
+      tx.objectStore(STORE).delete(key);
+      tx.objectStore(META).delete(key);
+      await txDone(tx);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  global.ImageCache = { put, getBlob, has, evict, clear, remove, keyFor, planEviction, MAX_BYTES };
 })(typeof self !== 'undefined' ? self : globalThis);

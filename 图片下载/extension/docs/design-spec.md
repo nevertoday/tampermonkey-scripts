@@ -23,10 +23,25 @@ Sidebar and mini-panel behavior:
 
 Visual system:
 
-- Morandi-inspired, low-saturation color system: warm ivory surfaces, muted sage primary actions, dusty gray-green text, soft taupe borders, and restrained clay accents.
-- Keep the interface clean, light, and healing without turning it into a decorative landing page.
-- Buttons, cards, inputs, counters, page controls, selected outlines, toasts, and placeholders use small consistent radii.
-- Borders, contrast, spacing, and subtle color temperature carry hierarchy instead of loud brand colors or heavy shadows.
+- Warm ivory surfaces with a single restrained red accent. Keep the interface clean and light; borders, contrast, spacing, and subtle color temperature carry hierarchy instead of loud brand colors or heavy shadows.
+- The side panel (`sidepanel/styles.css`) and the injected page UI (`content/content.css`) are separate CSS contexts but MUST share one token scale. Side-panel tokens are unprefixed; content tokens use the `--idx-` prefix. Identically-named concepts MUST hold identical values across both files.
+
+Color tokens (keep both files in sync):
+
+- `accent` `#ff2442` — base red: fills, dots, active pills, checked switches.
+- `accent-hover` `#e6002e` — darker red for hover/press on a solid red fill.
+- `accent-ink` (`--idx-accent-dark`) `#d81e38` — red used as text/icon on a light tint; never use the bright `accent` for red text.
+- `ink` `#25211d` — primary text. `muted` `#746d64` — secondary text (solid, not alpha, so it stays stable over arbitrary host pages).
+- `line` `rgba(62,52,42,.1)`, `line-strong` `rgba(62,52,42,.16)` — borders.
+- `soft` `rgba(62,52,42,.045)`, `soft-hover` `rgba(62,52,42,.08)` — neutral control fills.
+- `surface` `rgba(255,254,250,.92)` (warm white), `surface-strong` `#fffefa` — card/panel backgrounds.
+
+Scale tokens:
+
+- Font weight ramp — use only `500 / 600 / 700 / 800 / 900`. 500 captions, 600 buttons/labels, 700 strong body, 800 headings & emphasis, 900 reserved (shortcut keys). The thin `300` is allowed only for the `+` glyph on the select button.
+- Control height — `30` compact (dock pills), `34` standard (buttons, selects, inputs), `40` large (modal inputs). Round counters (`38/42/52/54`) are decorative and context-specific.
+- Radius — `10` small inputs, `14` chips/list items, `18` cards & modals, `999` pills. Modal titles are `18px / 800`.
+- Motion — `--motion-fast 120ms`, `--motion-med 150ms`; longer dock transitions live in `content.css` only.
 
 Copy system:
 
@@ -46,6 +61,7 @@ Initial adapters:
 
 - 小红书: `xiaohongshu.com`
 - Pinterest: `pinterest.com`
+- X: `x.com`, `twitter.com`
 - 微信公众号: `mp.weixin.qq.com`
 - 500px: `500px.com`
 - 堆糖: `duitang.com`
