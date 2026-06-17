@@ -1,10 +1,10 @@
 importScripts('lib/image-cache.js', 'lib/i18n.js');
 
-const I18n = self.ImageDownloaderI18n;
-const t = (key, vars) => I18n.t(key, vars);
+const I18n = globalThis.ImageDownloaderI18n || (typeof self !== 'undefined' ? self.ImageDownloaderI18n : null);
+const t = (key, vars) => I18n?.t?.(key, vars) || key;
 // Keep the worker's language in sync with the saved setting.
-chrome.storage.sync.get('settings').then((stored) => I18n.setLang(stored?.settings?.language)).catch(() => {});
-chrome.storage.onChanged.addListener((changes, area) => {
+chrome.storage?.sync?.get?.('settings').then((stored) => I18n.setLang(stored?.settings?.language)).catch(() => {});
+chrome.storage?.onChanged?.addListener?.((changes, area) => {
   if (area === 'sync' && changes.settings) I18n.setLang(changes.settings.newValue?.language);
 });
 
@@ -14,7 +14,7 @@ const HISTORY_LIMIT = 50;
 const pendingDownloadNames = new Map();
 const TRANSIENT_DOWNLOAD_PREFIX = 'idx-transient-download:';
 
-chrome.downloads.onDeterminingFilename.addListener((item, suggest) => {
+chrome.downloads?.onDeterminingFilename?.addListener?.((item, suggest) => {
   prunePendingDownloadNames();
   const filename = consumePendingDownloadName(item.url) || consumePendingDownloadName(item.finalUrl);
   if (!filename) return;
@@ -77,8 +77,14 @@ async function cacheEntries(entries) {
 }
 
 async function handleDownload(payload, sender = {}) {
-  const entries = Array.isArray(payload.entries) ? payload.entries : [];
+  // Dedupe by URL up front so the file count, the ZIP contents, and the stored
+  // history record all reflect the same unique set. Otherwise a selection with
+  // duplicate image URLs (e.g. the same Huaban image pinned many times) zips N
+  // files but the history (which dedupes) previews far fewer — count vs preview
+  // mismatch. recordHistory re-derives from payload, so feed it the same set.
+  const entries = normalizeHistoryEntries(payload.entries);
   if (!entries.length) throw new Error(t('toast_none_selected'));
+  payload = { ...payload, entries };
 
   const mode = payload.mode || 'zip';
   const progress = downloadProgressReporter(sender, mode, entries.length);

@@ -146,6 +146,19 @@
   display: none !important;
 }
 
+/* Optional left-bottom dock (settings: 网页快捷栏位置). Mirror the anchor and the
+   transform origins so the collapse/expand animation still grows from the corner. */
+#idx-mini-panel[data-position="left"] {
+  right: auto !important;
+  left: 18px !important;
+  transform-origin: left bottom !important;
+}
+
+#idx-mini-panel[data-position="left"] .idx-site-pill,
+#idx-mini-panel[data-position="left"] .idx-actions {
+  transform-origin: left center !important;
+}
+
 .idx-site-pill {
   height: 30px !important;
   display: inline-flex !important;
@@ -245,7 +258,9 @@
   overflow-x: auto !important;
   scrollbar-width: none !important;
   transform-origin: right center !important;
-  max-width: min(390px, calc(100vw - 152px)) !important;
+  /* Grow to fit the labels (longer in English); only scroll when the viewport
+     is genuinely too narrow, instead of clipping at a fixed width. */
+  max-width: calc(100vw - 152px) !important;
   visibility: visible !important;
   transition:
     opacity 210ms ease-out,
@@ -304,6 +319,13 @@
 
 #idx-mini-panel button:not(:disabled):active {
   transform: scale(0.96) !important;
+}
+
+/* `all: unset` above wipes the default focus ring; restore a clear one (inset so
+   the scrolling actions row can't crop it). */
+#idx-mini-panel button:focus-visible {
+  outline: none !important;
+  box-shadow: inset 0 0 0 2px rgba(var(--idx-accent-rgb), 0.55) !important;
 }
 
 #idx-mini-panel button.idx-primary {
@@ -648,6 +670,22 @@
   margin-bottom: 14px !important;
   padding: 0 12px !important;
   font-size: 14px !important;
+}
+
+.idx-prefix-field {
+  display: grid !important;
+  gap: 7px !important;
+  margin: 14px 0 10px !important;
+}
+
+.idx-prefix-field span {
+  color: var(--idx-muted) !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.idx-prefix-field input {
+  margin-bottom: 0 !important;
 }
 
 .idx-modal-card textarea {

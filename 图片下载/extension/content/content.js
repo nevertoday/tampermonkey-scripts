@@ -1,6 +1,9 @@
 (function () {
   'use strict';
 
+  if (window.__ImageDownloaderContentLoaded) return;
+  window.__ImageDownloaderContentLoaded = true;
+
   const bridge = window.ImageDownloaderAdapters;
   const adapter = bridge?.currentAdapter();
   const allAdapters = bridge?.adapters || [];
@@ -12,6 +15,7 @@
     showHoverButtons: true,
     enableShortcuts: true,
     language: 'zh',
+    dockPosition: 'right',
     defaultDownloadMode: 'zip',
     shortcuts: {
       select: 'a',
@@ -447,7 +451,7 @@
         type: 'download',
         payload: {
           mode,
-          prefix: siteSettings().prefix || adapter.defaultPrefix,
+          prefix: currentSitePrefix(),
           site: { id: adapter.id, name: I18n.siteName(adapter.id, adapter.name) },
           entries: selectedEntries()
         }
@@ -517,6 +521,7 @@
     panel.id = 'idx-mini-panel';
     panel.dataset.site = adapter.id;
     panel.dataset.lang = I18n.lang;
+    panel.dataset.position = state.settings.dockPosition === 'left' ? 'left' : 'right';
     panel.innerHTML = `
       <div class="idx-site-pill">${escapeHtml(localSiteBadge())}</div>
       <div class="idx-count">0</div>
@@ -573,6 +578,7 @@
     panel.classList.toggle('idx-collapsed', collapsed);
     panel.classList.toggle('idx-busy', state.busy);
     panel.dataset.site = adapter.id;
+    panel.dataset.position = state.settings.dockPosition === 'left' ? 'left' : 'right';
     panel.setAttribute('role', collapsed ? 'button' : 'toolbar');
     panel.setAttribute('aria-label', collapsed ? t('mp_collapsed_aria', { n: state.selected.size }) : t('mp_toolbar_aria'));
     panel.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
@@ -831,13 +837,21 @@
     const modal = showModal(`
       <h3>${escapeHtml(t('dl_method'))}</h3>
       <p>${escapeHtml(t('dl_total', { n: state.selected.size }))}</p>
+      <label class="idx-prefix-field" for="idx-download-prefix">
+        <span>${escapeHtml(t('dl_prefix_title'))}</span>
+        <input id="idx-download-prefix" value="${escapeHtml(currentSitePrefix())}" placeholder="${escapeHtml(adapter.defaultPrefix)}">
+      </label>
       <div class="idx-dl-list">
         ${DOWNLOAD_MODES.map((item) => downloadModeButton(item)).join('')}
       </div>
     `);
     updateShortcutHints(modal);
-    const runDownloadMode = (mode) => {
+    const input = modal.querySelector('#idx-download-prefix');
+    window.setTimeout(() => input?.select(), 60);
+    const runDownloadMode = async (mode) => {
       closeModal(modal);
+      const prefix = input?.value.trim() || adapter.defaultPrefix;
+      await saveSitePrefix(prefix);
       downloadSelected(mode, isNewBatch);
     };
     modal._idxKeydown = (event) => {
@@ -873,11 +887,10 @@
   }
 
   function showPrefixModal(callback) {
-    const currentPrefix = siteSettings().prefix || adapter.defaultPrefix;
     const modal = showModal(`
       <h3>${escapeHtml(t('dl_prefix_title'))}</h3>
       <p>${escapeHtml(t('dl_prefix_desc'))}</p>
-      <input id="idx-prefix-input" value="${escapeHtml(currentPrefix)}">
+      <input id="idx-prefix-input" value="${escapeHtml(currentSitePrefix())}">
     `);
     const input = modal.querySelector('#idx-prefix-input');
     const ok = document.createElement('button');
@@ -928,7 +941,7 @@
         type: 'copy',
         siteId: adapter.id,
         siteName: I18n.siteName(adapter.id, adapter.name),
-        prefix: siteSettings().prefix || adapter.defaultPrefix,
+        prefix: currentSitePrefix(),
         mode: 'links',
         count: links.length,
         failed: 0,
@@ -1069,6 +1082,7 @@
       ...DEFAULT_SETTINGS,
       ...source,
       language: source.language === 'en' ? 'en' : 'zh',
+      dockPosition: source.dockPosition === 'left' ? 'left' : 'right',
       shortcuts: normalizeShortcuts(source.shortcuts),
       sites: {
         ...DEFAULT_SETTINGS.sites,
@@ -1102,6 +1116,10 @@
 
   function siteSettings() {
     return state.settings.sites[adapter.id] || { enabled: true, prefix: adapter.defaultPrefix };
+  }
+
+  function currentSitePrefix() {
+    return siteSettings().prefix || adapter.defaultPrefix;
   }
 
   async function loadSelected() {
@@ -1138,7 +1156,7 @@
       site: {
         id: adapter.id,
         name: adapter.name,
-        prefix: siteSettings().prefix || adapter.defaultPrefix,
+        prefix: currentSitePrefix(),
         theme: siteTheme()
       },
       selectedCount: state.selected.size,

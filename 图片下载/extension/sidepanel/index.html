@@ -17,6 +17,7 @@
 
       <section class="panel active" id="tab-sites">
         <p class="panel-lead" data-i18n="lead_sites">悬停图片即可拾取，批量下载原图</p>
+        <div class="permission-prompt" id="permission-prompt" hidden></div>
         <div class="site-list" id="site-list"></div>
       </section>
 
@@ -42,10 +43,12 @@
             <h2 data-i18n="history_title">历史</h2>
             <p data-i18n="history_sub">最近的下载记录</p>
           </div>
-          <button type="button" id="clear-history" data-i18n="clear">清空</button>
         </div>
         <div class="history-filter" id="history-filter" aria-label="按平台过滤历史"></div>
         <div class="history-list" id="history-list"></div>
+        <div class="history-bottom-bar">
+          <button type="button" id="clear-history" data-i18n="clear">清空</button>
+        </div>
       </section>
 
       <section class="panel" id="tab-settings">
@@ -135,6 +138,23 @@
             <option value="links" data-i18n="mode_links">保存链接文本</option>
           </select>
         </label>
+        <label class="field">
+          <span data-i18n="set_dockposition">网页快捷栏位置</span>
+          <select id="dock-position">
+            <option value="right" data-i18n="pos_right">右下角</option>
+            <option value="left" data-i18n="pos_left">左下角</option>
+          </select>
+        </label>
+        <section class="cache-card" aria-labelledby="cache-title">
+          <div class="cache-head">
+            <span>
+              <strong id="cache-title" data-i18n="cache_title">图片缓存</strong>
+              <small data-i18n="cache_sub">保留已下载图片，便于在历史中重新下载</small>
+            </span>
+            <button type="button" id="clear-cache" data-i18n="cache_clear">清除</button>
+          </div>
+          <div class="cache-usage" id="cache-usage"></div>
+        </section>
         <section class="author-section settings-support" aria-labelledby="author-title">
           <aside class="support-panel" aria-label="打赏作者">
             <div class="support-copy">

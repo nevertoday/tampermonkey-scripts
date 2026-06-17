@@ -7,6 +7,8 @@ const zlib = require('node:zlib');
 const downloads = [];
 const historyWrites = [];
 const tabMessages = [];
+const tabCreates = [];
+let transientZipBlob = null;
 
 const context = {
   Blob,
@@ -21,10 +23,15 @@ const context = {
   setTimeout,
   chrome: {
     runtime: {
+      getURL: (path) => `chrome-extension://unit/${path}`,
       onInstalled: { addListener() {} },
       onMessage: { addListener() {} }
     },
     tabs: {
+      create: async (item) => {
+        tabCreates.push(item);
+        return { id: tabCreates.length };
+      },
       sendMessage: async (tabId, message) => {
         tabMessages.push({ tabId, message });
       }
@@ -74,6 +81,16 @@ vm.runInContext(
   { filename: 'background.js' }
 );
 
+const originalImageCachePut = context.ImageCache.put;
+context.ImageCache.put = async (key, blob, options = {}) => {
+  if (String(key).startsWith('idx-transient-download:')) {
+    transientZipBlob = blob;
+    assert.equal(options.skipEvict, true, 'transient download payloads should skip cache eviction');
+    return true;
+  }
+  return originalImageCachePut(key, blob, options);
+};
+
 (async () => {
   assert.equal(typeof context.handleDownload, 'function', 'background should expose handleDownload in script context');
   const result = await context.handleDownload({
@@ -89,7 +106,8 @@ vm.runInContext(
   assert.equal(result.count, 2);
   assert.equal(result.failed, 0);
   assert.equal(result.mode, 'zip');
-  assert.equal(downloads.length, 1);
+  assert.equal(downloads.length, 0, 'ZIP blob downloads should be handed off through the transient download page');
+  assert.equal(tabCreates.length, 1, 'background should open one transient download tab');
   assert.deepEqual(
     tabMessages.map((item) => item.message.payload && {
       phase: item.message.payload.phase,
@@ -109,8 +127,8 @@ vm.runInContext(
     ],
     'background should stream ZIP fetch, pack, and save progress back to the content Dock'
   );
-  assert.match(downloads[0].filename, /^unit-[a-f0-9]{8}\.zip$/);
-  assert.match(downloads[0].url, /^data:application\/zip;base64,/);
+  assert.match(tabCreates[0].url, /^chrome-extension:\/\/unit\/download\/download\.html\?token=[^&]+&filename=unit-[a-f0-9]{8}\.zip$/);
+  assert.equal(tabCreates[0].active, false);
   assert.equal(historyWrites.length, 1);
   assert.equal(historyWrites[0].downloadHistory[0].siteId, 'unit-site');
   assert.equal(JSON.stringify(historyWrites[0].downloadHistory[0].entries), JSON.stringify([
@@ -118,12 +136,14 @@ vm.runInContext(
     { id: 'b', url: 'https://example.com/b.jpg' }
   ]));
 
-  const zipBytes = Buffer.from(downloads[0].url.split(',')[1], 'base64');
+  assert.ok(transientZipBlob, 'ZIP blob should be stored as a transient cache payload');
+  const zipBytes = Buffer.from(await transientZipBlob.arrayBuffer());
   const entries = listZipEntries(zipBytes);
   assert.equal(entries.length, 2);
+  const filename = decodeURIComponent(new URL(tabCreates[0].url).searchParams.get('filename'));
   assert.deepEqual(entries.map((entry) => entry.name).sort(), [
-    `${downloads[0].filename.replace(/\.zip$/, '')}/001.jpg`,
-    `${downloads[0].filename.replace(/\.zip$/, '')}/002.jpg`
+    `${filename.replace(/\.zip$/, '')}/001.jpg`,
+    `${filename.replace(/\.zip$/, '')}/002.jpg`
   ]);
   assert.deepEqual(entries.map((entry) => entry.body).sort(), ['alpha-image', 'beta-image']);
   console.log('background download tests ok');

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "拾图",
   "short_name": "拾图",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "悬停网页图片即可拾取，通过侧边栏批量下载原图。支持打包 ZIP、逐张保存或导出链接列表，也可粘贴图片直链直接下载。已适配多个主流图片与灵感网站。",
   "icons": {
     "16": "assets/icon-16.png",
@@ -14,6 +14,7 @@
     "activeTab",
     "declarativeNetRequest",
     "downloads",
+    "scripting",
     "sidePanel",
     "storage",
     "tabs"
@@ -27,7 +28,8 @@
       }
     ]
   },
-  "host_permissions": [
+  "host_permissions": [],
+  "optional_host_permissions": [
     "https://*.xiaohongshu.com/*",
     "https://xiaohongshu.com/*",
     "https://*.xhscdn.com/*",
@@ -55,7 +57,9 @@
     "https://*.instagram.com/*",
     "https://instagram.com/*",
     "https://*.cdninstagram.com/*",
-    "https://*.fbcdn.net/*"
+    "https://*.fbcdn.net/*",
+    "https://*.behance.net/*",
+    "https://behance.net/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -71,39 +75,5 @@
   },
   "side_panel": {
     "default_path": "sidepanel/index.html"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://*.xiaohongshu.com/*",
-        "https://xiaohongshu.com/*",
-        "https://*.pinterest.com/*",
-        "https://pinterest.com/*",
-        "https://*.x.com/*",
-        "https://x.com/*",
-        "https://*.twitter.com/*",
-        "https://twitter.com/*",
-        "https://mp.weixin.qq.com/*",
-        "https://*.500px.com/*",
-        "https://500px.com/*",
-        "https://*.duitang.com/*",
-        "https://duitang.com/*",
-        "https://*.huaban.com/*",
-        "https://huaban.com/*",
-        "https://*.dribbble.com/*",
-        "https://dribbble.com/*",
-        "https://*.instagram.com/*",
-        "https://instagram.com/*"
-      ],
-      "js": [
-        "lib/i18n.js",
-        "content/site-adapters.js",
-        "content/content.js"
-      ],
-      "css": [
-        "content/content.css"
-      ],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

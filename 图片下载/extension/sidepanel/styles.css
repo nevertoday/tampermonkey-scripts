@@ -183,7 +183,10 @@ button:disabled {
   background: transparent;
   color: var(--muted);
   border-radius: 16px;
-  transition: color var(--motion-med), transform var(--motion-fast);
+  /* Match the sliding pill's duration/easing so the active label only turns
+     white in lockstep with the pill arriving under it — otherwise the text goes
+     white ~290ms before the pill, flashing white-on-white during the switch. */
+  transition: color 440ms cubic-bezier(0.34, 1.32, 0.5, 1), transform var(--motion-fast);
 }
 
 .tab.active {
@@ -194,6 +197,7 @@ button:disabled {
 
 .tab:not(.active):not(:disabled):hover {
   transform: none;
+  background: transparent;
   color: var(--ink);
 }
 
@@ -209,7 +213,9 @@ button:disabled {
 
 .tab:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.16);
+  box-shadow:
+    0 0 0 2px var(--surface-strong),
+    0 0 0 4px var(--ink);
 }
 
 .panel {
@@ -225,10 +231,31 @@ button:disabled {
 
 select {
   width: 100%;
-  padding: 0 12px;
-  border-color: transparent;
-  background: var(--soft);
-  appearance: auto;
+  height: 34px;
+  padding: 0 34px 0 13px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background-color: var(--surface-strong);
+  /* custom chevron so it matches the design instead of the native OS arrow */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23746d64' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+select:hover {
+  border-color: var(--line-strong);
+}
+
+select:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.08);
 }
 
 .primary {
@@ -252,6 +279,53 @@ select {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.permission-prompt {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid rgba(var(--site-rgb, var(--accent-rgb)), 0.22);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(var(--site-rgb, var(--accent-rgb)), 0.14), rgba(255, 254, 250, 0.96) 46%),
+    var(--surface);
+  box-shadow: 0 6px 24px rgba(var(--site-rgb, var(--accent-rgb)), 0.12), var(--shadow-soft);
+}
+
+.permission-prompt[hidden] {
+  display: none;
+}
+
+.permission-prompt strong,
+.permission-prompt p {
+  display: block;
+}
+
+.permission-prompt strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.permission-prompt p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.permission-prompt button {
+  min-width: 92px;
+  background: var(--site-accent, var(--accent));
+}
+
+@media (max-width: 360px) {
+  .permission-prompt {
+    grid-template-columns: 1fr;
+  }
 }
 
 .link-dl {
@@ -357,16 +431,11 @@ select {
   font-size: 12px;
 }
 
-.history-head button {
-  width: 64px;
-  flex: 0 0 auto;
-}
-
 .history-filter {
   display: flex;
   gap: 7px;
-  margin: -2px 0 12px;
-  padding: 2px 0 4px;
+  margin: -4px -2px 10px;
+  padding: 4px 2px 8px;
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -376,6 +445,7 @@ select {
 }
 
 .history-filter-chip {
+  position: relative;
   height: 30px;
   display: inline-flex;
   align-items: center;
@@ -386,6 +456,7 @@ select {
   border-radius: 15px;
   background: rgba(var(--history-rgb), 0.07);
   color: var(--history-dark);
+  transition: border-color var(--motion-fast), background var(--motion-fast), color var(--motion-fast), box-shadow var(--motion-fast), transform var(--motion-fast);
 }
 
 .history-filter-chip em {
@@ -400,10 +471,26 @@ select {
   font-weight: 800;
 }
 
+/* The generic button:hover greys the background; override it so a chip keeps its
+   colour on hover. Without this, hovering the active chip makes it look
+   deselected. transform:none avoids a lift that the scroll row would clip. */
+.history-filter-chip:not(.active):not(:disabled):hover {
+  transform: none;
+  border-color: rgba(var(--history-rgb), 0.3);
+  background: rgba(var(--history-rgb), 0.13);
+  color: var(--history-dark);
+}
+
 .history-filter-chip.active {
   background: var(--history-accent);
   color: #fff;
   box-shadow: 0 4px 16px rgba(var(--history-rgb), 0.18);
+}
+
+.history-filter-chip.active:not(:disabled):hover {
+  transform: none;
+  background: var(--history-accent);
+  color: #fff;
 }
 
 .history-filter-chip.active em {
@@ -411,10 +498,53 @@ select {
   color: inherit;
 }
 
+.history-filter-chip:focus-visible {
+  outline: none;
+  border-color: rgba(var(--history-rgb), 0.34);
+  box-shadow:
+    0 0 0 2px var(--surface-strong),
+    0 0 0 4px var(--ink);
+}
+
+.history-filter-chip.active:focus-visible {
+  box-shadow:
+    0 4px 16px rgba(var(--history-rgb), 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.72),
+    0 0 0 2px var(--surface-strong),
+    0 0 0 4px var(--ink);
+}
+
 .history-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 76px;
+}
+
+.history-bottom-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 8px -14px -14px;
+  padding: 12px 14px 14px;
+  background:
+    linear-gradient(to top, var(--bg) 72%, rgba(246, 244, 239, 0));
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+}
+
+.history-bottom-bar button {
+  width: 100%;
+  height: 40px;
+  border-color: rgba(62, 52, 42, 0.12);
+  border-radius: 20px;
+  background: var(--surface-strong);
+  color: var(--muted);
+  box-shadow: 0 4px 20px rgba(42, 34, 26, 0.06);
+}
+
+.history-bottom-bar button:not(:disabled):hover {
+  background: var(--soft-hover);
 }
 
 .history-item,
@@ -680,6 +810,7 @@ select {
 .switch-row,
 .field,
 .shortcut-card,
+.cache-card,
 .author-copy,
 .support-panel {
   border: 1px solid var(--line);
@@ -719,6 +850,11 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.switch-row > span {
+  min-width: 0;
+  flex: 1;
 }
 
 .site-toggle {
@@ -817,6 +953,13 @@ select {
   white-space: nowrap;
 }
 
+.switch-row small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.35;
+}
+
 .site-enable {
   display: inline-flex;
   flex: 0 0 auto;
@@ -840,6 +983,42 @@ select {
   overflow: hidden;
 }
 
+.site-permission-row {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.site-permission-state {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(62, 52, 42, 0.07);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.site-card.has-permission .site-permission-state {
+  background: rgba(var(--site-rgb, var(--accent-rgb)), 0.1);
+  color: var(--site-dark, var(--accent-ink));
+}
+
+.site-permission-row button {
+  min-width: 68px;
+  background: var(--site-accent, var(--accent));
+  color: #fff;
+  box-shadow: 0 3px 14px rgba(var(--site-rgb, var(--accent-rgb)), 0.14);
+}
+
+.site-permission-row button:not(:disabled):hover {
+  background: var(--site-dark, var(--accent-hover));
+}
+
 .prefix {
   margin-top: 10px;
   display: grid;
@@ -850,8 +1029,7 @@ select {
   font-size: 12px;
 }
 
-.prefix input,
-.field select {
+.prefix input {
   width: 100%;
   height: 34px;
   padding: 0 11px;
@@ -863,8 +1041,7 @@ select {
   transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
-.prefix input:focus,
-.field select:focus {
+.prefix input:focus {
   border-color: rgba(var(--accent-rgb), 0.45);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.08);
 }
@@ -915,13 +1092,53 @@ input[type="checkbox"]:active {
 
 .switch-row,
 .field,
-.shortcut-card {
+.shortcut-card,
+.cache-card {
   margin-bottom: 10px;
   padding: 13px 14px;
 }
 
 .field {
   display: block;
+}
+
+.cache-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cache-head strong,
+.cache-head small {
+  display: block;
+}
+
+.cache-head > span {
+  min-width: 0;
+}
+
+.cache-head strong {
+  font-weight: 800;
+}
+
+.cache-head small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cache-head button {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0 14px;
+}
+
+.cache-usage {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .field span {
@@ -940,6 +1157,10 @@ input[type="checkbox"]:active {
 .shortcut-head strong,
 .shortcut-head small {
   display: block;
+}
+
+.shortcut-head > span {
+  min-width: 0;
 }
 
 .shortcut-head strong {
@@ -1052,7 +1273,7 @@ input[type="checkbox"]:active {
   height: auto;
   min-height: 54px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
@@ -1077,6 +1298,10 @@ input[type="checkbox"]:active {
 .support-option strong,
 .support-option small {
   display: block;
+}
+
+.support-option > span:first-child {
+  min-width: 0;
 }
 
 .support-option strong {

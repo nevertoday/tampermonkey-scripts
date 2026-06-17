@@ -27,7 +27,7 @@ const expected = {
   'mmbiz.qpic.cn': 'https://mp.weixin.qq.com/'
 };
 
-const hostPermissions = manifest.host_permissions.join(' ');
+const optionalHostPermissions = (manifest.optional_host_permissions || []).join(' ');
 const seenIds = new Set();
 for (const [cdn, referer] of Object.entries(expected)) {
   const rule = rules.find((item) => item.condition?.urlFilter === `||${cdn}`);
@@ -40,9 +40,10 @@ for (const [cdn, referer] of Object.entries(expected)) {
   assert.equal(rule.condition.domainType, 'thirdParty', `${cdn} rule must stay scoped to third-party (extension) requests so normal browsing is untouched`);
   assert.ok(rule.condition.resourceTypes.includes('image'), `${cdn} rule must cover <img> preview requests`);
   assert.ok(rule.condition.resourceTypes.includes('xmlhttprequest') || rule.condition.resourceTypes.includes('other'), `${cdn} rule must cover background fetch/download requests`);
-  // Host access is required for modifyHeaders to take effect on the request.
+  // Host access is still required for modifyHeaders to take effect, but it is
+  // now granted only after the user enables that site.
   const cdnHostPattern = cdn.includes('.') && cdn.split('.').length > 2 ? cdn : `*.${cdn}`;
-  assert.ok(hostPermissions.includes(cdn), `manifest host_permissions must grant access to ${cdn} (pattern like ${cdnHostPattern})`);
+  assert.ok(optionalHostPermissions.includes(cdn), `manifest optional_host_permissions must be able to grant access to ${cdn} (pattern like ${cdnHostPattern})`);
 }
 
 // rule ids must be unique positive integers

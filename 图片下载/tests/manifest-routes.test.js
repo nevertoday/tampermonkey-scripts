@@ -2,8 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const manifest = JSON.parse(fs.readFileSync('extension/manifest.json', 'utf8'));
-const contentMatches = manifest.content_scripts.flatMap((script) => script.matches || []);
 const hostPermissions = manifest.host_permissions || [];
+const optionalHostPermissions = manifest.optional_host_permissions || [];
+const contentMatches = (manifest.content_scripts || []).flatMap((script) => script.matches || []);
 
 const pageUrls = [
   'https://www.xiaohongshu.com/explore/abc123',
@@ -25,17 +26,28 @@ const imageUrls = [
 
 for (const url of pageUrls) {
   assert.ok(
+    optionalHostPermissions.some((pattern) => chromeMatch(pattern, url)),
+    `optional host permission should match ${url}`
+  );
+}
+
+for (const url of pageUrls) {
+  assert.equal(
     contentMatches.some((pattern) => chromeMatch(pattern, url)),
-    `content script should match ${url}`
+    false,
+    `content script should not auto-match ${url}`
   );
 }
 
 for (const url of imageUrls) {
   assert.ok(
-    hostPermissions.some((pattern) => chromeMatch(pattern, url)),
-    `host permission should match ${url}`
+    optionalHostPermissions.some((pattern) => chromeMatch(pattern, url)),
+    `optional host permission should match ${url}`
   );
 }
+
+assert.deepEqual(hostPermissions, [], 'default host permissions should stay empty for faster review');
+assert.equal(manifest.permissions.includes('scripting'), true, 'dynamic injection needs scripting permission');
 
 function chromeMatch(pattern, rawUrl) {
   const url = new URL(rawUrl);

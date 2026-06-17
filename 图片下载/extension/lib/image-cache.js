@@ -146,6 +146,19 @@
     }
   }
 
+  // Lightweight usage readout (count + total bytes) from the META store, so the
+  // settings UI can show how much the cache holds without loading any blobs.
+  async function stats() {
+    try {
+      const db = await openDb();
+      const meta = await asPromise(db.transaction(META, 'readonly').objectStore(META).getAll());
+      const list = Array.isArray(meta) ? meta : [];
+      return { count: list.length, bytes: list.reduce((sum, record) => sum + (Number(record.size) || 0), 0) };
+    } catch (_) {
+      return { count: 0, bytes: 0 };
+    }
+  }
+
   async function remove(url) {
     try {
       const db = await openDb();
@@ -160,5 +173,5 @@
     }
   }
 
-  global.ImageCache = { put, getBlob, has, evict, clear, remove, keyFor, planEviction, MAX_BYTES };
+  global.ImageCache = { put, getBlob, has, evict, clear, remove, stats, keyFor, planEviction, MAX_BYTES };
 })(typeof self !== 'undefined' ? self : globalThis);

@@ -364,6 +364,48 @@
         const code = link.match(/\/(?:p|reel|tv)\/([^/?#]+)/)?.[1] || instagramMediaId(url);
         return code ? `ig-${code}-${hash(url).slice(0, 8)}` : `ig-${hash(url).slice(0, 10)}`;
       }
+    },
+    {
+      id: 'behance',
+      name: 'Behance',
+      defaultPrefix: 'behance',
+      theme: {
+        accent: '#0057ff',
+        rgb: '0, 87, 255',
+        dark: '#0044cc',
+        badge: 'Behance'
+      },
+      hosts: ['behance.net'],
+      matches: () => /(^|\.)behance\.net$/i.test(location.hostname),
+      images(root = document) {
+        return Array.from(root.querySelectorAll('img')).filter((img) => {
+          if (!isBehancePhotoUrl(this.url(img))) return false;
+          // Behance lazy-loads with real layout boxes, so require a measured size
+          // to drop the hidden 0×0 "tools used" thumbnails and tiny chrome.
+          const rect = img.getBoundingClientRect();
+          const measured = img.naturalWidth || rect.width || Number(img.getAttribute('width')) || 0;
+          return measured >= 120;
+        });
+      },
+      hostFor(img) {
+        return img.closest('a[href*="/gallery/"], [class*="ImageElement"], [class*="project-module"], figure') || img.parentElement;
+      },
+      usesFloatingControls() {
+        return true;
+      },
+      floatingControlOffset(_img, rect) {
+        return rect.height > 140 ? { x: 10, y: 14 } : { x: 8, y: 8 };
+      },
+      url(img) {
+        const raw = parseSrcset(img.getAttribute('srcset')) || img.currentSrc || img.src || img.getAttribute('data-src') || '';
+        return normalizeBehance(raw);
+      },
+      key(img, url) {
+        const fromLink = img.closest('a[href*="/gallery/"]')?.getAttribute('href')?.match(/\/gallery\/(\d+)/)?.[1];
+        const fromLocation = location.href.match(/\/gallery\/(\d+)/)?.[1];
+        const id = fromLink || fromLocation;
+        return id ? `be-${id}-${hash(url).slice(0, 8)}` : `be-${hash(url).slice(0, 10)}`;
+      }
     }
   ];
 
@@ -508,6 +550,35 @@
         parsed.pathname = parsed.pathname.replace('/small/', '/').replace(/_(?:fw|sq)\d+(?:webp)?$/i, '');
       }
       parsed.hash = '';
+      return parsed.href;
+    } catch (_) {
+      return absolute;
+    }
+  }
+
+  function isBehancePhotoUrl(url) {
+    try {
+      const parsed = new URL(url, location.href);
+      // Real images live on the mir CDN; a5.behance.net is UI chrome, /user/ is avatars.
+      if (parsed.hostname !== 'mir-s3-cdn-cf.behance.net') return false;
+      if (/\/user\//i.test(parsed.pathname)) return false;
+      return /\/(project_modules|projects)\//i.test(parsed.pathname);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function normalizeBehance(url) {
+    const absolute = absoluteUrl(url);
+    if (!absolute) return '';
+    try {
+      const parsed = new URL(absolute);
+      if (parsed.hostname === 'mir-s3-cdn-cf.behance.net') {
+        // Upgrade gallery modules to the original upload — much larger than the
+        // displayed max_*_webp derivative, and confirmed to exist.
+        parsed.pathname = parsed.pathname.replace(/\/project_modules\/[^/]+\//, '/project_modules/source/');
+        parsed.hash = '';
+      }
       return parsed.href;
     } catch (_) {
       return absolute;

@@ -4,6 +4,8 @@ const SITES = [
     name: '小红书',
     host: 'xiaohongshu.com',
     defaultPrefix: 'xiaohongshu',
+    pagePatterns: ['https://*.xiaohongshu.com/*', 'https://xiaohongshu.com/*'],
+    permissionPatterns: ['https://*.xiaohongshu.com/*', 'https://xiaohongshu.com/*', 'https://*.xhscdn.com/*'],
     theme: { accent: '#ff2442', rgb: '255, 36, 66', dark: '#d81e38', badge: '小红书' }
   },
   {
@@ -11,6 +13,8 @@ const SITES = [
     name: 'Pinterest',
     host: 'pinterest.com',
     defaultPrefix: 'pinterest',
+    pagePatterns: ['https://*.pinterest.com/*', 'https://pinterest.com/*'],
+    permissionPatterns: ['https://*.pinterest.com/*', 'https://pinterest.com/*', 'https://*.pinimg.com/*'],
     theme: { accent: '#bd081c', rgb: '189, 8, 28', dark: '#8c0617', badge: 'Pinterest' }
   },
   {
@@ -18,6 +22,8 @@ const SITES = [
     name: 'X',
     host: 'x.com',
     defaultPrefix: 'x',
+    pagePatterns: ['https://*.x.com/*', 'https://x.com/*', 'https://*.twitter.com/*', 'https://twitter.com/*'],
+    permissionPatterns: ['https://*.x.com/*', 'https://x.com/*', 'https://*.twitter.com/*', 'https://twitter.com/*', 'https://pbs.twimg.com/*'],
     theme: { accent: '#1d9bf0', rgb: '29, 155, 240', dark: '#0f6fad', badge: 'X' }
   },
   {
@@ -25,6 +31,8 @@ const SITES = [
     name: '微信公众号',
     host: 'mp.weixin.qq.com',
     defaultPrefix: 'wechat',
+    pagePatterns: ['https://mp.weixin.qq.com/*'],
+    permissionPatterns: ['https://mp.weixin.qq.com/*', 'https://mmbiz.qpic.cn/*', 'https://mmbiz.qlogo.cn/*'],
     theme: { accent: '#07c160', rgb: '7, 193, 96', dark: '#128c4a', badge: '微信' }
   },
   {
@@ -32,6 +40,8 @@ const SITES = [
     name: '500px',
     host: '500px.com',
     defaultPrefix: '500px',
+    pagePatterns: ['https://*.500px.com/*', 'https://500px.com/*'],
+    permissionPatterns: ['https://*.500px.com/*', 'https://500px.com/*', 'https://*.500px.org/*'],
     theme: { accent: '#0099e5', rgb: '0, 153, 229', dark: '#087db8', badge: '500px' }
   },
   {
@@ -39,6 +49,8 @@ const SITES = [
     name: '堆糖',
     host: 'duitang.com',
     defaultPrefix: 'duitang',
+    pagePatterns: ['https://*.duitang.com/*', 'https://duitang.com/*'],
+    permissionPatterns: ['https://*.duitang.com/*', 'https://duitang.com/*', 'https://*.dtstatic.com/*'],
     theme: { accent: '#e86f8f', rgb: '232, 111, 143', dark: '#c65372', badge: '堆糖' }
   },
   {
@@ -46,6 +58,8 @@ const SITES = [
     name: '花瓣',
     host: 'huaban.com',
     defaultPrefix: 'huaban',
+    pagePatterns: ['https://*.huaban.com/*', 'https://huaban.com/*'],
+    permissionPatterns: ['https://*.huaban.com/*', 'https://huaban.com/*'],
     theme: { accent: '#c95f68', rgb: '201, 95, 104', dark: '#9e414d', badge: '花瓣' }
   },
   {
@@ -53,6 +67,8 @@ const SITES = [
     name: 'Dribbble',
     host: 'dribbble.com',
     defaultPrefix: 'dribbble',
+    pagePatterns: ['https://*.dribbble.com/*', 'https://dribbble.com/*'],
+    permissionPatterns: ['https://*.dribbble.com/*', 'https://dribbble.com/*'],
     theme: { accent: '#ea4c89', rgb: '234, 76, 137', dark: '#c32361', badge: 'Dribbble' }
   },
   {
@@ -60,6 +76,8 @@ const SITES = [
     name: 'Instagram',
     host: 'instagram.com',
     defaultPrefix: 'instagram',
+    pagePatterns: ['https://*.instagram.com/*', 'https://instagram.com/*'],
+    permissionPatterns: ['https://*.instagram.com/*', 'https://instagram.com/*', 'https://*.cdninstagram.com/*', 'https://*.fbcdn.net/*'],
     theme: {
       accent: '#d62976',
       rgb: '214, 41, 118',
@@ -67,6 +85,15 @@ const SITES = [
       badge: 'Instagram',
       gradient: 'linear-gradient(135deg, #feda75, #fa7e1e 28%, #d62976 56%, #962fbf 78%, #4f5bd5)'
     }
+  },
+  {
+    id: 'behance',
+    name: 'Behance',
+    host: 'behance.net',
+    defaultPrefix: 'behance',
+    pagePatterns: ['https://*.behance.net/*', 'https://behance.net/*'],
+    permissionPatterns: ['https://*.behance.net/*', 'https://behance.net/*'],
+    theme: { accent: '#0057ff', rgb: '0, 87, 255', dark: '#0044cc', badge: 'Behance' }
   }
 ];
 
@@ -76,6 +103,7 @@ const DEFAULT_SETTINGS = {
   showHoverButtons: true,
   enableShortcuts: true,
   language: 'zh',
+  dockPosition: 'right',
   defaultDownloadMode: 'zip',
   shortcuts: {
     select: 'a',
@@ -302,6 +330,7 @@ function onTabShown(name) {
   }
   if (name === 'settings') {
     setStatus(t('status_settings'));
+    refreshCacheUsage();
   }
 }
 
@@ -310,7 +339,8 @@ function bindHistory() {
     historyItems = [];
     historyFilter = 'all';
     await chrome.storage.local.set({ [HISTORY_KEY]: [] }).catch(() => {});
-    ImageCache?.clear?.().catch(() => {}); // free cached image bytes for cleared records
+    await ImageCache?.clear?.().catch(() => {}); // free cached image bytes for cleared records
+    refreshCacheUsage();
     renderHistoryFilter();
     renderHistory();
   });
@@ -330,6 +360,46 @@ function renderSettings() {
   const defaultMode = document.getElementById('default-download-mode');
   defaultMode.value = settings.defaultDownloadMode;
   defaultMode.onchange = () => saveSettings({ ...settings, defaultDownloadMode: defaultMode.value });
+  const dockPosition = document.getElementById('dock-position');
+  if (dockPosition) {
+    dockPosition.value = settings.dockPosition || 'right';
+    dockPosition.onchange = () => saveSettings({ ...settings, dockPosition: dockPosition.value });
+  }
+  bindCacheControls();
+}
+
+function bindCacheControls() {
+  const clear = document.getElementById('clear-cache');
+  if (clear && !clear.dataset.bound) {
+    clear.dataset.bound = '1';
+    clear.addEventListener('click', async () => {
+      clear.disabled = true;
+      await ImageCache?.clear?.().catch(() => {});
+      await refreshCacheUsage();
+      setStatus(t('cache_cleared'));
+      clear.disabled = false;
+    });
+  }
+  refreshCacheUsage();
+}
+
+async function refreshCacheUsage() {
+  const el = document.getElementById('cache-usage');
+  if (!el) return;
+  let stats = { count: 0, bytes: 0 };
+  try {
+    stats = (await ImageCache?.stats?.()) || stats;
+  } catch (_) { /* keep zero */ }
+  el.textContent = stats.count
+    ? t('cache_usage', { count: stats.count, size: formatBytes(stats.bytes) })
+    : t('cache_empty');
+}
+
+function formatBytes(bytes) {
+  const n = Number(bytes) || 0;
+  if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  if (n >= 1024) return `${Math.round(n / 1024)} KB`;
+  return `${n} B`;
 }
 
 function bindCheckbox(id, key) {
@@ -437,9 +507,13 @@ function renderSites() {
       </div>
       <div class="site-settings" id="${escapeHtml(settingsId)}">
         <div class="site-settings-inner">
+          <div class="site-permission-row">
+            <span class="site-permission-state" data-site-permission-state>${t('permission_site_status_off')}</span>
+            <button type="button" data-site-authorize="${escapeHtml(site.id)}">${t('permission_site_button')}</button>
+          </div>
           <label class="prefix">
             <span>${t('filename_prefix')}</span>
-            <input type="text" value="${escapeHtml(siteSettings.prefix || site.defaultPrefix)}" aria-label="${escapeHtml(siteDisplayName(site))}">
+            <input type="text" value="${escapeHtml(siteSettings.prefix || site.defaultPrefix)}" placeholder="${escapeHtml(site.defaultPrefix)}" aria-label="${escapeHtml(siteDisplayName(site))}">
           </label>
         </div>
       </div>
@@ -447,14 +521,17 @@ function renderSites() {
     const toggle = card.querySelector('.site-toggle');
     const enabled = card.querySelector('input[type="checkbox"]');
     const prefix = card.querySelector('input[type="text"]');
+    const authorize = card.querySelector('[data-site-authorize]');
     toggle.addEventListener('click', () => toggleSiteCard(card, site.id));
     enabled.addEventListener('change', () => {
       card.classList.toggle('is-off', !enabled.checked);
       updateSite(site.id, { enabled: enabled.checked });
     });
     prefix.addEventListener('change', () => updateSite(site.id, { prefix: prefix.value.trim() || site.defaultPrefix }));
+    authorize.addEventListener('click', () => grantSiteAccess(site, authorize));
     list.appendChild(card);
   }
+  refreshSitePermissionBadges();
 }
 
 function toggleSiteCard(card, siteId) {
@@ -498,6 +575,19 @@ async function updateSite(siteId, patch) {
   });
 }
 
+async function refreshSitePermissionBadges() {
+  await Promise.all(SITES.map(async (site) => {
+    const card = document.querySelector(`[data-site="${cssEscape(site.id)}"]`);
+    if (!card) return;
+    const granted = await hasSiteAccess(site);
+    card.classList.toggle('has-permission', granted);
+    const state = card.querySelector('[data-site-permission-state]');
+    const button = card.querySelector('[data-site-authorize]');
+    if (state) state.textContent = granted ? t('permission_site_status_on') : t('permission_site_status_off');
+    if (button) button.hidden = granted;
+  }));
+}
+
 async function refreshStatus() {
   activeTab = await getActiveTab();
   if (!activeTab?.id) {
@@ -507,12 +597,132 @@ async function refreshStatus() {
 
   const response = await sendToTab('status');
   if (!response?.ok) {
+    const site = siteForUrl(activeTab.url || activeTab.pendingUrl || '');
+    if (site) {
+      const granted = await hasSiteAccess(site);
+      if (granted && await injectCurrentTab(site)) {
+        await refreshStatus();
+        return;
+      }
+      setPermissionPrompt(site);
+      setStatus(granted ? t('tab_not_ready') : '');
+      return;
+    }
     setUnsupported(t('unsupported_page'));
     return;
   }
+  clearPermissionPrompt();
   currentStatus = response.result;
   updateHeader();
   setStatus(currentStatus.enabled ? t('status_can_select') : t('status_site_disabled'));
+}
+
+function siteForUrl(rawUrl) {
+  if (!rawUrl) return null;
+  let url;
+  try {
+    url = new URL(rawUrl);
+  } catch (_) {
+    return null;
+  }
+  if (url.protocol !== 'https:') return null;
+  return SITES.find((site) => siteMatchesHost(site, url.hostname)) || null;
+}
+
+function siteMatchesHost(site, hostname) {
+  return (site.pagePatterns || []).some((pattern) => {
+    const host = pattern.match(/^https:\/\/([^/]+)\//)?.[1] || '';
+    if (host.startsWith('*.')) {
+      const base = host.slice(2);
+      return hostname === base || hostname.endsWith(`.${base}`);
+    }
+    return hostname === host;
+  });
+}
+
+async function hasSiteAccess(site) {
+  try {
+    return await chrome.permissions.contains({ origins: site.permissionPatterns || [] });
+  } catch (_) {
+    return false;
+  }
+}
+
+async function grantSiteAccess(site, button) {
+  const label = button?.textContent || '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = t('processing');
+  }
+  try {
+    const granted = await chrome.permissions.request({ origins: site.permissionPatterns || [] });
+    if (!granted) {
+      setStatus(t('permission_retry'));
+      return false;
+    }
+    await injectCurrentTab(site);
+    await refreshSitePermissionBadges();
+    setStatus(t('permission_granted', { name: siteDisplayName(site) }));
+    await refreshStatus();
+    return true;
+  } catch (_) {
+    setStatus(t('permission_grant_failed'));
+    return false;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = label || t('permission_site_button');
+    }
+  }
+}
+
+async function injectCurrentTab(site) {
+  if (!activeTab?.id) return false;
+  const tabSite = siteForUrl(activeTab.url || activeTab.pendingUrl || '');
+  const currentSite = site || tabSite;
+  if (site && tabSite?.id !== site.id) return false;
+  if (!currentSite || !await hasSiteAccess(currentSite)) return false;
+  try {
+    await chrome.scripting.insertCSS({
+      target: { tabId: activeTab.id },
+      files: ['content/content.css']
+    });
+    await chrome.scripting.executeScript({
+      target: { tabId: activeTab.id },
+      files: ['lib/i18n.js', 'content/site-adapters.js', 'content/content.js']
+    });
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function setPermissionPrompt(site) {
+  currentStatus = null;
+  updateHeader();
+  applyCurrentTheme(site);
+  const prompt = document.getElementById('permission-prompt');
+  if (!prompt) return;
+  const theme = siteTheme(site);
+  prompt.hidden = false;
+  prompt.style.setProperty('--site-accent', theme.accent);
+  prompt.style.setProperty('--site-rgb', theme.rgb);
+  prompt.innerHTML = `
+    <div>
+      <strong>${escapeHtml(t('permission_needed_title'))}</strong>
+      <p>${escapeHtml(t('permission_needed_desc', { name: siteDisplayName(site) }))}</p>
+    </div>
+    <button type="button" class="primary">${t('permission_button')}</button>
+  `;
+  prompt.querySelector('button').addEventListener('click', (event) => grantSiteAccess(site, event.currentTarget));
+}
+
+function clearPermissionPrompt() {
+  const prompt = document.getElementById('permission-prompt');
+  if (prompt) {
+    prompt.hidden = true;
+    prompt.innerHTML = '';
+  }
 }
 
 function updateHeader() {
@@ -555,7 +765,9 @@ function setUnsupported(message) {
     count.textContent = '0';
     count.hidden = true;
   }
-  setStatus(message);
+  // The site list already makes the next step obvious, so an "unsupported page"
+  // footer is redundant — clear it (the footer hides itself when empty).
+  setStatus('');
 }
 
 async function loadHistory() {
@@ -633,7 +845,7 @@ function renderHistory() {
         <strong>${escapeHtml(site ? siteDisplayName(site) : (item.siteName || t('images_word')))}</strong>
         <small>${escapeHtml(formatHistoryMeta(item))}${entryCount ? ` · ${t('n_links', { n: entryCount })}` : ''}</small>
       </div>
-      <div class="history-count">${Number(item.count) || 0}</div>
+      <div class="history-count">${entryCount || Number(item.count) || 0}</div>
     </button>
   `;
   }).join('');
@@ -652,7 +864,7 @@ function showHistoryModal(item) {
   const modal = showPanelModal({
     eyebrow: site ? siteDisplayName(site) : (item.siteName || t('history_record')),
     title: historyTypeLabel(item),
-    description: `${t('n_images', { n: Number(item.count) || entries.length || 0 })} · ${formatHistoryMeta(item) || t('just_now')}`,
+    description: `${t('n_images', { n: entries.length || Number(item.count) || 0 })} · ${formatHistoryMeta(item) || t('just_now')}`,
     body: `
       <div class="history-modal-shell" style="--history-accent: ${escapeHtml(theme.accent)}; --history-rgb: ${escapeHtml(theme.rgb)}; --history-dark: ${escapeHtml(theme.dark)};">
         <div class="history-modal-meta">
@@ -978,6 +1190,7 @@ function normalizeSettings(value) {
     ...DEFAULT_SETTINGS,
     ...source,
     language: source.language === 'en' ? 'en' : 'zh',
+    dockPosition: source.dockPosition === 'left' ? 'left' : 'right',
     shortcuts: normalizeShortcuts(source.shortcuts),
     sites: {
       ...DEFAULT_SETTINGS.sites,
@@ -1011,8 +1224,10 @@ function normalizeShortcutKey(value) {
 
 function setStatus(message) {
   const status = document.getElementById('status');
-  status.textContent = message;
-  flash(status, 'is-updated');
+  if (!status) return;
+  status.textContent = message || '';
+  status.hidden = !message;
+  if (message) flash(status, 'is-updated');
 }
 
 function flash(element, className) {
@@ -1030,4 +1245,9 @@ function escapeHtml(value) {
     '"': '&quot;',
     "'": '&#39;'
   })[char]);
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) return window.CSS.escape(String(value));
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
 }

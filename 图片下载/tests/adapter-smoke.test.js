@@ -108,10 +108,14 @@ function runCase({ host, href, siteId, image, expectUrlIncludes, expectKeyPrefix
   const expectedThemes = {
     xiaohongshu: '#ff2442',
     pinterest: '#bd081c',
+    x: '#1d9bf0',
     wechat: '#07c160',
     '500px': '#0099e5',
     duitang: '#e86f8f',
-    huaban: '#c95f68'
+    huaban: '#c95f68',
+    dribbble: '#ea4c89',
+    instagram: '#d62976',
+    behance: '#0057ff'
   };
   for (const adapter of bridge.adapters) {
     assert.equal(adapter.theme.accent, expectedThemes[adapter.id], `${adapter.id} should keep its own recognizable site color`);
